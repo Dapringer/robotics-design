@@ -10,7 +10,6 @@
 #define In4 6
 #define EnB 7
 
-
 const int SENSOR_MAX_RANGE = 300;  // in cm
 unsigned long duration;
 unsigned int distance;

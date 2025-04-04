@@ -5,9 +5,6 @@
 #define PIN_TRIGGER_B 10
 #define PIN_ECHO_B 11
 
-#define MIN_DIST 15
-#define MAX_MOTOR_SPEED 255
-#define MIN_MOTOR_SPEED 100
 
 #define EnA 2
 #define In1 3
@@ -19,6 +16,7 @@
 using namespace std;
 
 const int SENSOR_MAX_RANGE = 300;  // in cm
+const int MIN_DIST = 15;
 unsigned long duration;
 unsigned int distance;
 
@@ -30,12 +28,22 @@ struct Motor {
 } motor1, motor2;
 
 
+struct UltraSonicSensor {
+  int id;
+  int triggerPin;
+  int echoPin;
+} us_front, us_right, us_back, us_left;
+
+
 void setup() {
   Serial.begin(9600);
 
 
   motor1 = { 1, EnA, In1, In2 };
   motor2 = { 2, EnB, In3, In4 };
+
+  us_front = { 1, PIN_TRIGGER_F, PIN_ECHO_F };
+  us_back = { 3, PIN_TRIGGER_B, PIN_ECHO_B };
 
   pinMode(PIN_TRIGGER_F, OUTPUT);
   pinMode(PIN_ECHO_F, INPUT);
@@ -57,10 +65,10 @@ void setup() {
 
 void loop() {
 
-  int distance_front = readUltraSonic(1);
-  // int distance_right = readUltraSonic(2);
-  int distance_back = readUltraSonic(3);
-  // int distance_left = readUltraSonic(4);
+  int distance_front = readUltraSonic(us_front);
+  // int distance_right = readUltraSonic(us_right);
+  int distance_back = readUltraSonic(us_back);
+  // int distance_left = readUltraSonic(us_left);
 
   if (!isTooNear(distance_front) && !isTooNear(distance_back)) {
     driveMotors(97, motor1, 0);
@@ -112,50 +120,18 @@ void driveMotors(int motorSpeed, struct Motor m, int direction) {
 }
 
 
-int readUltraSonic(int sensorID) {
-  switch (sensorID) {
-    case 1:
-      digitalWrite(PIN_TRIGGER_F, LOW);
-      delayMicroseconds(2);
+int readUltraSonic(struct UltraSonicSensor us) {
+  digitalWrite(us.triggerPin, LOW);
+  delayMicroseconds(2);
 
-      digitalWrite(PIN_TRIGGER_F, HIGH);
-      delayMicroseconds(10);
+  digitalWrite(us.triggerPin, HIGH);
+  delayMicroseconds(10);
 
-      duration = pulseIn(PIN_ECHO_F, HIGH);
-      break;
-      // case 2:
-      //   digitalWrite(PIN_TRIGGER_R, LOW);
-      //   delayMicroseconds(2);
-
-      //   digitalWrite(PIN_TRIGGER_R, HIGH);
-      //   delayMicroseconds(10);
-
-      //   duration = pulseIn(PIN_ECHO_R, HIGH);
-      break;
-    case 3:
-      digitalWrite(PIN_TRIGGER_B, LOW);
-      delayMicroseconds(2);
-
-      digitalWrite(PIN_TRIGGER_B, HIGH);
-      delayMicroseconds(10);
-
-      duration = pulseIn(PIN_ECHO_B, HIGH);
-      // case 4:
-      //     digitalWrite(PIN_TRIGGER_L, LOW);
-      //   delayMicroseconds(2);
-
-      //   digitalWrite(PIN_TRIGGER_L, HIGH);
-      //   delayMicroseconds(10);
-
-      //   duration = pulseIn(PIN_ECHO_L, HIGH);
-      break;
-    default:
-      break;
-  }
+  duration = pulseIn(us.echoPin, HIGH);
 
   distance = (duration / 58);
   Serial.print("Distance to object from Sensor ");
-  Serial.print(sensorID);
+  Serial.print(us.id);
   Serial.print(". Measured Distance: ");
   Serial.println(distance);
 

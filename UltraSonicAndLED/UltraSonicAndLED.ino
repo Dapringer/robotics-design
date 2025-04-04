@@ -2,9 +2,12 @@
 
 #define PIN_TRIGGER_F 12
 #define PIN_ECHO_F 13
+#define PIN_TRIGGER_R 8
+#define PIN_ECHO_R 9
 #define PIN_TRIGGER_B 10
 #define PIN_ECHO_B 11
-
+// #define PIN_TRIGGER_B 10
+// #define PIN_ECHO_B 11
 
 #define EnA 2
 #define In1 3
@@ -43,34 +46,35 @@ void setup() {
   motor2 = { 2, EnB, In3, In4 };
 
   us_front = { 1, PIN_TRIGGER_F, PIN_ECHO_F };
+  us_right = { 2, PIN_TRIGGER_R, PIN_ECHO_R };
   us_back = { 3, PIN_TRIGGER_B, PIN_ECHO_B };
 
-  pinMode(PIN_TRIGGER_F, OUTPUT);
-  pinMode(PIN_ECHO_F, INPUT);
-  // pinMode(PIN_TRIGGER_R, OUTPUT);
-  // pinMode(PIN_ECHO_R, INPUT);
-  pinMode(PIN_TRIGGER_B, OUTPUT);
-  pinMode(PIN_ECHO_B, INPUT);
+  pinMode(us_front.triggerPin, OUTPUT);
+  pinMode(us_front.echoPin, INPUT);
+  pinMode(us_right.triggerPin, OUTPUT);
+  pinMode(us_right.echoPin, INPUT);
+  pinMode(us_back.triggerPin, OUTPUT);
+  pinMode(us_back.echoPin, INPUT);
   // pinMode(PIN_TRIGGER_L, OUTPUT);
   // pinMode(PIN_ECHO_L, INPUT);
 
 
-  pinMode(EnA, OUTPUT);
-  pinMode(In1, OUTPUT);
-  pinMode(In2, OUTPUT);
-  pinMode(In3, OUTPUT);
-  pinMode(In4, OUTPUT);
-  pinMode(EnB, OUTPUT);
+  pinMode(motor1.enPin, OUTPUT);
+  pinMode(motor1.inPin1, OUTPUT);
+  pinMode(motor1.inPin2, OUTPUT);
+  pinMode(motor2.inPin1, OUTPUT);
+  pinMode(motor2.inPin2, OUTPUT);
+  pinMode(motor2.enPin, OUTPUT);
 }
 
 void loop() {
 
   int distance_front = readUltraSonic(us_front);
-  // int distance_right = readUltraSonic(us_right);
+  int distance_right = readUltraSonic(us_right);
   int distance_back = readUltraSonic(us_back);
   // int distance_left = readUltraSonic(us_left);
 
-  if (!isTooNear(distance_front) && !isTooNear(distance_back)) {
+  if (!isTooNear(distance_front) && !isTooNear(distance_right) && !isTooNear(distance_back)) {
     driveMotors(97, motor1, 0);
     driveMotors(100, motor2, 0);
   } else {

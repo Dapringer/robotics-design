@@ -1,7 +1,13 @@
+#include <string.h>
+
 #define PIN_TRIGGER_F 12
 #define PIN_ECHO_F 13
 #define PIN_TRIGGER_B 10
 #define PIN_ECHO_B 11
+
+#define MIN_DIST 15
+#define MAX_MOTOR_SPEED 255
+#define MIN_MOTOR_SPEED 100
 
 #define EnA 2
 #define In1 3
@@ -10,12 +16,26 @@
 #define In4 6
 #define EnB 7
 
+using namespace std;
+
 const int SENSOR_MAX_RANGE = 300;  // in cm
 unsigned long duration;
 unsigned int distance;
 
+struct Motor {
+  int id;
+  int enPin;
+  int inPin1;
+  int inPin2;
+} motor1, motor2;
+
+
 void setup() {
   Serial.begin(9600);
+
+
+  motor1 = { 1, EnA, In1, In2 };
+  motor2 = { 2, EnB, In3, In4 };
 
   pinMode(PIN_TRIGGER_F, OUTPUT);
   pinMode(PIN_ECHO_F, INPUT);
@@ -43,8 +63,8 @@ void loop() {
   // int distance_left = readUltraSonic(4);
 
   if (!isTooNear(distance_front) && !isTooNear(distance_back)) {
-    driveMotors(255, 1);
-    driveMotors(255, 2);
+    driveMotors(97, motor1, 0);
+    driveMotors(100, motor2, 0);
   } else {
     emergencyBreak();
   }
@@ -53,38 +73,38 @@ void loop() {
 }
 
 bool isTooNear(int distance) {
-  if (distance > 5) {
-    return false;
-  } else {
+  if (distance < MIN_DIST) {
     return true;
+  } else {
+    return false;
   }
 }
 
 void emergencyBreak() {
-  digitalWrite(In1, LOW);
-  digitalWrite(In2, LOW);
-  digitalWrite(In3, LOW);
-  digitalWrite(In4, LOW);
+  driveMotors(97, motor1, 1);
+  driveMotors(100, motor2, 1);
 
   Serial.println("Emergency Stop!");
 }
 
 
-void driveMotors(int motorSpeed, int motorID) {
+void driveMotors(int motorSpeed, struct Motor m, int direction) {
   Serial.print("Motor Speed: ");
   Serial.print(motorSpeed);
   Serial.print(" | Motor ID: ");
-  Serial.println(motorID);
-  switch (motorID) {
-    case 1:
-      digitalWrite(In1, HIGH);
-      digitalWrite(In2, LOW);
-      analogWrite(EnA, motorSpeed);
+  Serial.print(m.id);
+  Serial.print(" | Motor Direction: ");
+  Serial.println(direction);
+  switch (direction) {
+    case 0:
+      digitalWrite(m.inPin1, HIGH);
+      digitalWrite(m.inPin2, LOW);
+      analogWrite(m.enPin, motorSpeed);
       break;
-    case 2:
-      digitalWrite(In3, HIGH);
-      digitalWrite(In4, LOW);
-      analogWrite(EnB, motorSpeed);
+    case 1:
+      digitalWrite(m.inPin1, LOW);
+      digitalWrite(m.inPin2, HIGH);
+      analogWrite(m.enPin, motorSpeed);
       break;
     default:
       return;

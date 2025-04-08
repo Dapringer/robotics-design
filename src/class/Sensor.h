@@ -12,6 +12,8 @@ private:
     unsigned long duration_;
     unsigned int distance_;
     unsigned int previousDistance_;
+    float measurements_[5]; // Array to store the last 10 measurements
+    int measurementIndex_;   // Index for the circular buffer
 
 public:
     Sensor(int id, int triggerPin, int echoPin);

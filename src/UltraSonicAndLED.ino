@@ -22,6 +22,9 @@
 #define In4 6
 #define EnB 7
 
+#define MAX_SPEED 175
+#define MIN_SPEED 100
+
 using namespace std;
 
 const int SENSOR_MAX_RANGE = 300; // in cm
@@ -29,13 +32,13 @@ const int MIN_DIST = 15;
 unsigned long duration;
 unsigned int distance;
 
-Motor motor1(1, In1, In2, EnA);
-Motor motor2(2, In3, In4, EnB);
+Motor motorRight(1, In1, In2, EnA);
+Motor motorLeft(2, In3, In4, EnB);
 
-Sensor sensor1(1, SENSOR_TRGGER, PIN_ECHO_F);
-Sensor sensor2(2, SENSOR_TRGGER, PIN_ECHO_R);
-Sensor sensor3(3, SENSOR_TRGGER, PIN_ECHO_B);
-Sensor sensor4(4, SENSOR_TRGGER, PIN_ECHO_L);
+Sensor sensorFront(1, SENSOR_TRGGER, PIN_ECHO_F);
+Sensor sensorRight(2, SENSOR_TRGGER, PIN_ECHO_R);
+Sensor sensorBack(3, SENSOR_TRGGER, PIN_ECHO_B);
+Sensor sensorLeft(4, SENSOR_TRGGER, PIN_ECHO_L);
 
 void setup()
 {
@@ -44,33 +47,32 @@ void setup()
 
 void loop()
 {
-  // sensor1.printStatus();
-  // sensor1.isWallApproaching();
-  // sensor2.printStatus();
-  sensor2.isWallApproaching();
-  // sensor3.printStatus();
-  // sensor3.isWallApproaching();
-  // sensor4.printStatus();
-  sensor4.isWallApproaching();
+  // sensorFront.printStatus();
+  // sensorFront.isWallApproaching();
+  sensorRight.printStatus();
+  sensorRight.isWallApproaching();
+  // sensorBack.printStatus();
+  // sensorBack.isWallApproaching();
+  //sensorLeft.printStatus();
+  //sensorLeft.isWallApproaching();
 
-  if (sensor2.isWallApproaching())
+  if (sensorRight.isWallApproaching())
   {
     Serial.println("Sensor 2: Wall Approaching!");
-    motor1.drive(50, 1);
-    motor2.drive(100, 1);
+    motorRight.drive(MAX_SPEED, 1);
+    motorLeft.drive(MIN_SPEED, 1);
   }
-  else if (sensor4.isWallApproaching())
+  else if (sensorLeft.isWallApproaching())
   {
-    Serial.println("Sensor 4: Wall Approaching!");
-    motor1.drive(100, 1);
-    motor2.drive(50, 1);
+    // Serial.println("Sensor 4: Wall Approaching!");
+    motorRight.drive(MIN_SPEED, 1);
+    motorLeft.drive(MAX_SPEED, 1);
   }
   else
   {
-    motor1.drive(100, 1);
-    motor2.drive(100, 1);
+    motorRight.drive(MAX_SPEED, 1);
+    motorLeft.drive(MAX_SPEED, 1);
   };
 
-  Serial.println("------------------");
-  delay(100);
+  // Serial.println("------------------");
 }

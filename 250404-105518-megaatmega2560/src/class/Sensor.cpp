@@ -9,15 +9,19 @@ Sensor::Sensor(int id, int triggerPin, int echoPin)
 {
     pinMode(triggerPin_, OUTPUT);
     pinMode(echoPin_, INPUT);
+    distance_ = readDistance();
 }
 
 bool Sensor::isWallApproaching()
 {
     wallApproaching_ = false;
-    distance_ = readDistance();
-    int previousDistance = distance_;
+    int distance = readDistance();
+    Serial.print("Distance: ");
+    Serial.println(distance);
+    Serial.print("Previous Distance: ");
+    Serial.println(this->distance_);
 
-    if (previousDistance > distance_)
+    if (this->distance_ > distance)
     {
         wallApproaching_ = true;
     }
@@ -26,6 +30,7 @@ bool Sensor::isWallApproaching()
         wallApproaching_ = false;
     }
 
+    this->distance_ = distance;
     return wallApproaching_;
 }
 
@@ -57,5 +62,7 @@ void Sensor::printStatus()
     Serial.print("      |      Duration: ");
     Serial.print(duration_);
     Serial.print("      |      Distance: ");
-    Serial.println(readDistance());
+    Serial.print(readDistance());
+    Serial.print("      |      Wall Approaching: ");
+    Serial.println(wallApproaching_ ? "Yes" : "No");
 }

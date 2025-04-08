@@ -11,12 +11,13 @@ private:
     int echoPin_;
     unsigned long duration_;
     unsigned int distance_;
+    unsigned int previousDistance_;
 
 public:
     Sensor(int id, int triggerPin, int echoPin);
 
     bool isWallApproaching();
-    int readDistance();
+    void readDistance();
     unsigned int getDistance() const;
     void printStatus();
 };

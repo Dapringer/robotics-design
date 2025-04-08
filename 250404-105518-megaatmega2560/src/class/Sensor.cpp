@@ -5,18 +5,16 @@
 
 // Constructor
 Sensor::Sensor(int id, int triggerPin, int echoPin)
-    : id_(id), triggerPin_(triggerPin), echoPin_(echoPin), duration_(0), distance_(0)
+    : id_(id), triggerPin_(triggerPin), echoPin_(echoPin), duration_(0), distance_(0), previousDistance_(0)
 {
     pinMode(triggerPin_, OUTPUT);
     pinMode(echoPin_, INPUT);
-    distance_ = readDistance();
 }
 
 bool Sensor::isWallApproaching()
 {
-    int newDistance = readDistance();
-
-    if (newDistance < distance_)
+    readDistance();
+    if (previousDistance_ > distance_)
     {
         wallApproaching_ = true;
     }
@@ -25,12 +23,12 @@ bool Sensor::isWallApproaching()
         wallApproaching_ = false;
     }
 
-    distance_ = newDistance;
+    previousDistance_ = distance_;
     return wallApproaching_;
 }
 
 // Method to read distance
-int Sensor::readDistance()
+void Sensor::readDistance()
 {
     digitalWrite(triggerPin_, LOW);
     delayMicroseconds(2);
@@ -41,8 +39,6 @@ int Sensor::readDistance()
     digitalWrite(triggerPin_, LOW);
     duration_ = pulseIn(echoPin_, HIGH);
     distance_ = duration_ / 58.0; // Convert duration to distance in cm
-
-    return distance_;
 }
 
 // Method to print sensor status
@@ -56,8 +52,8 @@ void Sensor::printStatus()
     Serial.print(echoPin_);
     Serial.print("      |      Duration: ");
     Serial.print(duration_);
-    Serial.print("      |      Distance: ");
-    Serial.print(readDistance());
-    Serial.print("      |      Wall Approaching: ");
+    Serial.print("ms      |      Distance: ");
+    Serial.print(distance_);
+    Serial.print("cm      |      Wall Approaching: ");
     Serial.println(wallApproaching_ ? "Yes" : "No");
 }

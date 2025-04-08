@@ -44,14 +44,17 @@ void setup()
 
 void loop()
 {
-  // sensor1.printStatus();
-  // sensor2.printStatus();
-  sensor3.isWallApproaching();
+  sensor1.printStatus();
+  sensor1.isWallApproaching();
+  sensor2.printStatus();
+  sensor2.isWallApproaching();
   sensor3.printStatus();
-  // sensor4.printStatus();
+  sensor3.isWallApproaching();
+  sensor4.printStatus();
+  sensor4.isWallApproaching();
 
   motor1.drive(97, 1);
   motor2.drive(100, 1);
-  // Serial.println("------------------");
+  Serial.println("------------------");
   delay(100);
 }

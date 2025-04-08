@@ -14,7 +14,7 @@ Sensor::Sensor(int id, int triggerPin, int echoPin)
 bool Sensor::isWallApproaching()
 {
     readDistance();
-    if (previousDistance_ > distance_)
+    if (previousDistance_ > distance_ && previousDistance_ - distance_ >= 2 && distance_ < 100)
     {
         wallApproaching_ = true;
     }

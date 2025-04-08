@@ -13,7 +13,7 @@
 #define PIN_TRIGGER_B 10
 #define PIN_ECHO_B A3
 #define PIN_TRIGGER_L 10
-#define PIN_ECHO_L A8
+#define PIN_ECHO_L A4
 
 #define EnA 2
 #define In1 3
@@ -44,17 +44,33 @@ void setup()
 
 void loop()
 {
-  sensor1.printStatus();
-  sensor1.isWallApproaching();
-  sensor2.printStatus();
+  // sensor1.printStatus();
+  // sensor1.isWallApproaching();
+  // sensor2.printStatus();
   sensor2.isWallApproaching();
-  sensor3.printStatus();
-  sensor3.isWallApproaching();
-  sensor4.printStatus();
+  // sensor3.printStatus();
+  // sensor3.isWallApproaching();
+  // sensor4.printStatus();
   sensor4.isWallApproaching();
 
-  motor1.drive(97, 1);
-  motor2.drive(100, 1);
+  if (sensor2.isWallApproaching())
+  {
+    Serial.println("Sensor 2: Wall Approaching!");
+    motor1.drive(50, 1);
+    motor2.drive(100, 1);
+  }
+  else if (sensor4.isWallApproaching())
+  {
+    Serial.println("Sensor 4: Wall Approaching!");
+    motor1.drive(100, 1);
+    motor2.drive(50, 1);
+  }
+  else
+  {
+    motor1.drive(100, 1);
+    motor2.drive(100, 1);
+  };
+
   Serial.println("------------------");
   delay(100);
 }

@@ -19,12 +19,16 @@ Sensor::Sensor(int id, int triggerPin, int echoPin)
 
 bool Sensor::isWallApproaching()
 {
-    
 
     readDistance();
     // Update the measurement array
     measurements_[measurementIndex_] = distance_;
     measurementIndex_ = (measurementIndex_ + 1) % 5; // Circular buffer
+
+    if (distance_ > 100 || distance_ < 0)
+    {
+        return false;
+    }
 
     // Calculate the trend
     float trend = 0;
@@ -32,31 +36,26 @@ bool Sensor::isWallApproaching()
     {
         trend += measurements_[i] - measurements_[i - 1];
     }
+    Serial.print("Trend: ");
+    Serial.println(trend);
 
     // Early exit: Significant drop in distance
-    if (distance_ < 15 && distance_ > 0) // Immediate detection for very close objects
-    {
-        Serial.println("Immediate wall detected!");
-        wallApproaching_ = true;
-        return wallApproaching_;
-    }
+    // if (distance_ < 15 && distance_ > 0) // Immediate detection for very close objects
+    // {
+    //     Serial.println("Immediate wall detected!");
+    //     wallApproaching_ = true;
+    //     return wallApproaching_;
+    // }
 
     // Persist the trend detection
-    static int consecutiveTrendCount = 0; // Track consecutive trend detections
-    if (trend < -1 && distance_ < 60 && distance_ > 0)
+    if (trend < -1 && distance_ < 100 && distance_ > 0)
     {
-        consecutiveTrendCount++;
-        if (consecutiveTrendCount >= 2) // Require 2 consecutive detections
-        {
-            wallApproaching_ = true;
-        }
+        wallApproaching_ = true;
     }
     else
     {
-        consecutiveTrendCount = 0; // Reset if trend is not detected
         wallApproaching_ = false;
     }
-
 
     previousDistance_ = distance_;
     return wallApproaching_;

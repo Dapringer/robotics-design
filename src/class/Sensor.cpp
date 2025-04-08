@@ -19,42 +19,71 @@ Sensor::Sensor(int id, int triggerPin, int echoPin)
 
 bool Sensor::isWallApproaching()
 {
-
     readDistance();
     // Update the measurement array
-    measurements_[measurementIndex_] = distance_;
-    measurementIndex_ = (measurementIndex_ + 1) % 5; // Circular buffer
-
-    if (distance_ > 100 || distance_ < 0)
+    if (distance_ > 100 || distance_ <= 0)
     {
+        Serial.println("Invalid distance measurement. Ignoring.");
         return false;
     }
 
-    // Calculate the trend
-    float trend = 0;
-    for (int i = 1; i < 5; i++)
+    measurements_[measurementIndex_] = distance_;
+    measurementIndex_ = (measurementIndex_ + 1) % 5; // Circular buffer
+
+    // Calculate the trend as total change and count how many drops
+    int drops = 0;
+    float totalTrend = 0;
+
+    int newestIndex = (measurementIndex_ - 1 + 5) % 5; // Most recent value
+
+    // Loop over all 4 steps (between 5 values)
+    for (int i = 0; i < 4; i++)
     {
-        trend += measurements_[i] - measurements_[i - 1];
+        int index1 = (measurementIndex_ + i) % 5;
+        int index2 = (measurementIndex_ + i + 1) % 5;
+        float stepChange = measurements_[index2] - measurements_[index1];
+        if (stepChange < 0)
+            drops++; // Count drops (negative changes)
+
+        totalTrend += stepChange;
     }
-    Serial.print("Trend: ");
-    Serial.println(trend);
 
-    // Early exit: Significant drop in distance
-    // if (distance_ < 15 && distance_ > 0) // Immediate detection for very close objects
-    // {
-    //     Serial.println("Immediate wall detected!");
-    //     wallApproaching_ = true;
-    //     return wallApproaching_;
-    // }
+    // Calculate average step change
+    float avgStepChange = totalTrend / 4.0;
 
-    // Persist the trend detection
-    if (trend < -1 && distance_ < 100 && distance_ > 0)
+    // Print the trend info
+    Serial.print("Measurement Index: ");
+    Serial.print(measurementIndex_);
+    Serial.print(" | Newest Index: ");
+    Serial.print(newestIndex);
+    Serial.print(" | Measurements: ");
+    for (int i = 0; i < 5; i++)
+    {
+        Serial.print(measurements_[i]);
+        if (i < 4)
+        {
+            Serial.print(", ");
+        }
+    }
+    Serial.print(" | Trend: ");
+    Serial.print(avgStepChange);
+    Serial.print(" | Drops: ");
+    Serial.print(drops);
+    Serial.print(" | Distance: ");
+    Serial.print(distance_);
+    Serial.print(" | ");
+
+    // Smart detection criteria:
+    // If we have 3 or more drops and the average step change is negative enough, it's a wall.
+    if (drops >= 3 && avgStepChange < -1 && distance_ < 100)
     {
         wallApproaching_ = true;
+        Serial.println("Wall approaching detected (smart mode)!");
     }
     else
     {
         wallApproaching_ = false;
+        Serial.println("No wall detected.");
     }
 
     previousDistance_ = distance_;

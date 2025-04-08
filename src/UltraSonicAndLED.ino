@@ -23,7 +23,7 @@
 #define EnB 7
 
 #define MAX_SPEED 175
-#define MIN_SPEED 100
+#define MIN_SPEED 50
 
 using namespace std;
 
@@ -49,16 +49,16 @@ void loop()
 {
   // sensorFront.printStatus();
   // sensorFront.isWallApproaching();
-  sensorRight.printStatus();
-  sensorRight.isWallApproaching();
+  // sensorRight.printStatus();
+  // sensorRight.isWallApproaching();
   // sensorBack.printStatus();
   // sensorBack.isWallApproaching();
-  //sensorLeft.printStatus();
-  //sensorLeft.isWallApproaching();
+  // sensorLeft.printStatus();
+  // sensorLeft.isWallApproaching();
 
   if (sensorRight.isWallApproaching())
   {
-    Serial.println("Sensor 2: Wall Approaching!");
+    // Serial.println("Sensor 2: Wall Approaching!");
     motorRight.drive(MAX_SPEED, 1);
     motorLeft.drive(MIN_SPEED, 1);
   }
@@ -74,5 +74,6 @@ void loop()
     motorLeft.drive(MAX_SPEED, 1);
   };
 
-  // Serial.println("------------------");
+  Serial.println("------------------");
+  delay(10);
 }

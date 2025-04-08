@@ -10,15 +10,20 @@ Motor::Motor(int id, int inPin1, int inPin2, int enPin)
     pinMode(enPin_, OUTPUT);
 }
 
-void Motor::drive(Speed speed, Direction direction)
+void Motor::drive(int speed, int direction)
 {
+    if (speed < 0 || speed > 255)
+    {
+        Serial.println("Invalid speed value. Must be between 0 and 255.");
+        return;
+    }
     switch (direction)
     {
-    case FORWARD:
+    case 1:
         digitalWrite(inPin1_, HIGH);
         digitalWrite(inPin2_, LOW);
         break;
-    case BACKWARD:
+    case 2:
         digitalWrite(inPin1_, LOW);
         digitalWrite(inPin2_, HIGH);
         break;

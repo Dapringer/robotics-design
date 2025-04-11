@@ -7,22 +7,22 @@
 
 #define SENSOR_TRGGER 21
 #define PIN_TRIGGER_F 12
-#define PIN_ECHO_F A1
+#define PIN_ECHO_F 2
 #define PIN_TRIGGER_R 21
-#define PIN_ECHO_R A2
-#define PIN_TRIGGER_B 10
-#define PIN_ECHO_B A3
-#define PIN_TRIGGER_L 10
-#define PIN_ECHO_L A4
+#define PIN_ECHO_R 3
+#define PIN_TRIGGER_B 21
+#define PIN_ECHO_B 18
+#define PIN_TRIGGER_L 21
+#define PIN_ECHO_L 19
 
-#define EnA 2
-#define In1 3
-#define In2 4
-#define In3 5
-#define In4 6
-#define EnB 7
+#define EnA 8
+#define In1 9
+#define In2 10
+#define In3 11
+#define In4 12
+#define EnB 13
 
-#define MAX_SPEED 175
+#define MAX_SPEED 150
 #define MIN_SPEED 75
 #define EMERGENCY_STOP_DISTANCE 5
 
@@ -36,10 +36,10 @@ unsigned int distance;
 Motor motorRight(1, In1, In2, EnA);
 Motor motorLeft(2, In3, In4, EnB);
 
-Sensor sensorFront(1, SENSOR_TRGGER, PIN_ECHO_F);
-Sensor sensorRight(2, SENSOR_TRGGER, PIN_ECHO_R);
-Sensor sensorBack(3, SENSOR_TRGGER, PIN_ECHO_B);
-Sensor sensorLeft(4, SENSOR_TRGGER, PIN_ECHO_L);
+Sensor sensorFront(1, SENSOR_TRGGER, PIN_ECHO_F, true);
+Sensor sensorRight(2, SENSOR_TRGGER, PIN_ECHO_R, true);
+Sensor sensorBack(3, SENSOR_TRGGER, PIN_ECHO_B, true);
+Sensor sensorLeft(4, SENSOR_TRGGER, PIN_ECHO_L, false);
 
 void setup()
 {
@@ -57,16 +57,19 @@ void loop()
   // sensorLeft.printStatus();
   // sensorLeft.isWallApproaching();
 
+  bool wallFront = sensorFront.isWallApproaching();
   bool wallRight = sensorRight.isWallApproaching();
   bool wallLeft = sensorLeft.isWallApproaching();
+  float distFront = sensorFront.getDistance();
   float distRight = sensorRight.getDistance();
   float distLeft = sensorLeft.getDistance();
 
-  if ((distRight > 0 && distRight <= EMERGENCY_STOP_DISTANCE) || (distLeft > 0 && distLeft <= EMERGENCY_STOP_DISTANCE))
+  if ((distRight > 0 && distRight <= EMERGENCY_STOP_DISTANCE) || (distLeft > 0 && distLeft <= EMERGENCY_STOP_DISTANCE) || (distFront > 0 && distFront <= 10))
   {
     motorLeft.emergencyStop();
     motorRight.emergencyStop();
     Serial.println("Emergency stop activated!");
+    return;
   }
 
   if (wallRight && wallLeft)
@@ -105,5 +108,5 @@ void loop()
   }
 
   Serial.println("------------------");
-  delay(10);
+  delay(50);
 }

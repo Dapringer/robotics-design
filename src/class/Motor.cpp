@@ -30,7 +30,18 @@ void Motor::drive(int speed, int direction)
     default:
         return;
     }
-    analogWrite(enPin_, speed);
+    switch (id_)
+    {
+    case 1:
+        analogWrite(enPin_, speed);
+        break;
+    case 2:
+        analogWrite(enPin_, speed + 30);
+
+        break;
+    default:
+        return;
+    }
 }
 
 void Motor::emergencyStop()

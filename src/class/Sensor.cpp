@@ -5,7 +5,7 @@
 
 // Constructor
 Sensor::Sensor(int id, int triggerPin, int echoPin)
-    : id_(id), triggerPin_(triggerPin), echoPin_(echoPin), duration_(0), distance_(0), previousDistance_(0), measurementIndex_(0)
+    : id_(id), triggerPin_(triggerPin), echoPin_(echoPin), duration_(0), distance_(0), measurementIndex_(0)
 {
     pinMode(triggerPin_, OUTPUT);
     pinMode(echoPin_, INPUT);
@@ -21,7 +21,7 @@ bool Sensor::isWallApproaching()
 {
     readDistance();
     // Update the measurement array
-    if (distance_ > 100 || distance_ <= 0)
+    if (distance_ > 50 || distance_ <= 0)
     {
         Serial.println("Invalid distance measurement. Ignoring.");
         return false;
@@ -75,7 +75,7 @@ bool Sensor::isWallApproaching()
 
     // Smart detection criteria:
     // If we have 3 or more drops and the average step change is negative enough, it's a wall.
-    if (drops >= 3 && avgStepChange < -1 && distance_ < 100)
+    if (drops >= 3 && avgStepChange < -1 && distance_ < 50)
     {
         wallApproaching_ = true;
         Serial.println("Wall approaching detected (smart mode)!");
@@ -86,7 +86,6 @@ bool Sensor::isWallApproaching()
         Serial.println("No wall detected.");
     }
 
-    previousDistance_ = distance_;
     return wallApproaching_;
 }
 
@@ -102,6 +101,11 @@ void Sensor::readDistance()
     digitalWrite(triggerPin_, LOW);
     duration_ = pulseIn(echoPin_, HIGH);
     distance_ = duration_ / 58.0; // Convert duration to distance in cm
+}
+
+unsigned int Sensor::getDistance() const
+{
+    return distance_;
 }
 
 // Method to print sensor status

@@ -23,7 +23,8 @@
 #define EnB 7
 
 #define MAX_SPEED 175
-#define MIN_SPEED 50
+#define MIN_SPEED 75
+#define EMERGENCY_STOP_DISTANCE 5
 
 using namespace std;
 
@@ -56,23 +57,52 @@ void loop()
   // sensorLeft.printStatus();
   // sensorLeft.isWallApproaching();
 
-  if (sensorRight.isWallApproaching())
+  bool wallRight = sensorRight.isWallApproaching();
+  bool wallLeft = sensorLeft.isWallApproaching();
+  float distRight = sensorRight.getDistance();
+  float distLeft = sensorLeft.getDistance();
+
+  if ((distRight > 0 && distRight <= EMERGENCY_STOP_DISTANCE) || (distLeft > 0 && distLeft <= EMERGENCY_STOP_DISTANCE))
   {
-    // Serial.println("Sensor 2: Wall Approaching!");
+    motorLeft.emergencyStop();
+    motorRight.emergencyStop();
+    Serial.println("Emergency stop activated!");
+  }
+
+  if (wallRight && wallLeft)
+  {
+    // Both sensors detect a wall – avoid the closer one
+    if (distRight < distLeft)
+    {
+      // Right is closer → steer left
+      motorRight.drive(MAX_SPEED, 1);
+      motorLeft.drive(MIN_SPEED, 1);
+    }
+    else
+    {
+      // Left is closer → steer right
+      motorRight.drive(MIN_SPEED, 1);
+      motorLeft.drive(MAX_SPEED, 1);
+    }
+  }
+  else if (wallRight)
+  {
+    // Only right detects wall → steer left
     motorRight.drive(MAX_SPEED, 1);
     motorLeft.drive(MIN_SPEED, 1);
   }
-  else if (sensorLeft.isWallApproaching())
+  else if (wallLeft)
   {
-    // Serial.println("Sensor 4: Wall Approaching!");
+    // Only left detects wall → steer right
     motorRight.drive(MIN_SPEED, 1);
     motorLeft.drive(MAX_SPEED, 1);
   }
   else
   {
+    // No wall approaching → go straight
     motorRight.drive(MAX_SPEED, 1);
     motorLeft.drive(MAX_SPEED, 1);
-  };
+  }
 
   Serial.println("------------------");
   delay(10);

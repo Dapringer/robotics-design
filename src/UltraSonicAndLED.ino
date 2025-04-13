@@ -56,12 +56,20 @@ void handleI2CInterrupt()
 
 void processI2CData()
 {
-  if (dataReady)
+  if (dataReady) // Check if data is ready to be processed
   {
-    // Read data from I2C device
-    dataReceived = Wire.read(); // Read the data from the I2C bus
-    Serial.print("Data received: ");
-    Serial.println(dataReceived);
+    dataReady = false; // Reset the flag
+
+    if (Wire.available()) { // Check if data is available to read
+      /**
+       * Optionally, add a if statement that says "if (dataReceived == 1) { ... }"
+       * to handle specific data received from the I2C bus.
+       * */
+
+      dataReceived = Wire.read(); // Read the data from the I2C bus
+      Serial.print("Data received: ");
+      Serial.println(dataReceived);
+    }
 
     dataReady = false;
   }
@@ -72,7 +80,7 @@ void setup()
   Serial.begin(9600);
   Wire.begin(arduAddress); // Initialize I2C with specified SDA and SCL pins
 
-  attachInterrupt(digitalPinToInterrupt(I2C_INTERRUPT_PIN), handleI2CInterrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(I2C_INTERRUPT_PIN), handleI2CInterrupt, FALLING); // Attach interrupt to I2C interrupt pin
 }
 
 void loop()

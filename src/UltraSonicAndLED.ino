@@ -46,8 +46,8 @@ Motor motorLeft(2, In3, In4, EnB);
 
 Sensor sensorFront(1, SENSOR_TRGGER, PIN_ECHO_F, true);
 Sensor sensorRight(2, SENSOR_TRGGER, PIN_ECHO_R, true);
-Sensor sensorBack(3, SENSOR_TRGGER, PIN_ECHO_B, true);
-Sensor sensorLeft(4, SENSOR_TRGGER, PIN_ECHO_L, false);
+Sensor sensorBack(3, SENSOR_TRGGER, PIN_ECHO_B, false);
+Sensor sensorLeft(4, SENSOR_TRGGER, PIN_ECHO_L, true);
 
 const byte arduAddress = I2C_ADDRESS; // I2C address of the Arduino board
 bool dataReady = false;
@@ -75,13 +75,30 @@ void processI2CData()
       Serial.print("Data received: ");
       Serial.println(dataReceived);
 
-      if (dataReceived) {
+      if (dataReceived)
+      {
         // Check if the received data is a command to stop the motors
-        if (dataReceived == 0) {
-          motorRight.emergencyStop(); // Stop the right motor
-          motorLeft.emergencyStop();  // Stop the left motor
-          Serial.println("Motors stopped due to I2C command.");
-        } 
+        switch (dataReceived)
+        {
+        case 0: // Stop both motors
+          driveRobot(0);
+          break;
+        case 1: // Move forward
+          driveRobot(1);
+          break;
+        case 2: // Move backward
+          driveRobot(2);
+          break;
+        case 3: // Turn left
+          driveRobot(3);
+          break;
+        case 4: // Turn right
+          driveRobot(4);
+          break;
+        default: // Invalid command
+          Serial.println("Invalid command received!");
+          break;
+        }
       }
     }
 
@@ -92,73 +109,28 @@ void processI2CData()
 void setup()
 {
   Serial.begin(9600);
-  Wire.begin(arduAddress);                                                                // Initialize I2C with specified SDA and SCL pins
-  pinMode(I2C_INTERRUPT_PIN, INPUT_PULLUP);                                               // Set the interrupt pin as input with pull-up resistor
-  attachInterrupt(digitalPinToInterrupt(I2C_INTERRUPT_PIN), handleI2CInterrupt, FALLING); // Attach interrupt to I2C interrupt pin
+  // Wire.begin(arduAddress);                                                                // Initialize I2C with specified SDA and SCL pins
+  // pinMode(I2C_INTERRUPT_PIN, INPUT_PULLUP);                                               // Set the interrupt pin as input with pull-up resistor
+  // attachInterrupt(digitalPinToInterrupt(I2C_INTERRUPT_PIN), handleI2CInterrupt, FALLING); // Attach interrupt to I2C interrupt pin
 }
 
 void loop()
 {
 
-  processI2CData(); // Process I2C data if available
+  // processI2CData(); // Process I2C data if available
 
   bool wallFront = sensorFront.isWallApproaching();
   bool wallRight = sensorRight.isWallApproaching();
-  bool wallBack = sensorBack.isWallApproaching();
   bool wallLeft = sensorLeft.isWallApproaching();
 
   float distFront = sensorFront.getDistance();
   float distRight = sensorRight.getDistance();
-  float distBack = sensorBack.getDistance();
   float distLeft = sensorLeft.getDistance();
 
   if (wallFront)
   {
-    // Approach the wall slowly until closer than 15 cm
-    if (distFront > MIN_DIST)
-    {
-      motorLeft.drive(MIN_SPEED, 1);
-      motorRight.drive(MIN_SPEED, 1);
-    }
-    else
-    {
-      // Stop when closer than 15 cm
-      motorLeft.emergencyStop();
-      motorRight.emergencyStop();
-      delay(1000);
-
-      // Check if there's space to back up
-      if (!wallBack)
-      {
-        // Back up
-        motorLeft.drive(MAX_SPEED, 2);
-        motorRight.drive(MAX_SPEED, 2);
-        delay(2000);
-
-        // Turn in a random direction
-        if (random(0, 2) == 0)
-        {
-          // Turn right
-          motorLeft.drive(MAX_SPEED, 1);
-          motorRight.drive(MIN_SPEED, 1);
-        }
-        else
-        {
-          // Turn left
-          motorLeft.drive(MIN_SPEED, 1);
-          motorRight.drive(MAX_SPEED, 1);
-        }
-        delay(1000);
-
-        // Stop after turning
-        motorLeft.drive(0, 0);
-        motorRight.drive(0, 0);
-      }
-      else
-      {
-        Serial.println("Cannot back up, obstacle detected!");
-      }
-    }
+    backUpFromWall();
+    Serial.println("Wall detected in front! Backing up...");
   }
   else if (wallRight && wallLeft)
   {
@@ -166,33 +138,30 @@ void loop()
     if (distRight < distLeft)
     {
       // Right is closer → steer left
-      motorRight.drive(MAX_SPEED, 1);
-      motorLeft.drive(MIN_SPEED, 1);
+      driveRobot(3);
     }
     else
     {
       // Left is closer → steer right
-      motorRight.drive(MIN_SPEED, 1);
-      motorLeft.drive(MAX_SPEED, 1);
+      driveRobot(4);
     }
   }
   else if (wallRight)
   {
     // Only right detects wall → steer left
-    motorRight.drive(MAX_SPEED, 1);
-    motorLeft.drive(MIN_SPEED, 1);
+    driveRobot(3);
   }
   else if (wallLeft)
   {
     // Only left detects wall → steer right
-    motorRight.drive(MIN_SPEED, 1);
-    motorLeft.drive(MAX_SPEED, 1);
+    driveRobot(4);
   }
-  else if (distFront > 0 && distFront > EMERGENCY_STOP_DISTANCE && distRight > EMERGENCY_STOP_DISTANCE && distLeft > EMERGENCY_STOP_DISTANCE)
+  else if (distFront > EMERGENCY_STOP_DISTANCE &&
+           (distRight == 0 || distRight > EMERGENCY_STOP_DISTANCE) &&
+           (distLeft == 0 || distLeft > EMERGENCY_STOP_DISTANCE))
   {
     // No wall approaching → go straight
-    motorRight.drive(MAX_SPEED, 1);
-    motorLeft.drive(MAX_SPEED, 1);
+    driveRobot(1);
   }
   else
   {
@@ -204,4 +173,81 @@ void loop()
 
   Serial.println("------------------");
   delay(50);
+}
+
+void driveRobot(int direction)
+{
+  if (direction == 3)
+  {
+    motorLeft.drive(MIN_SPEED, 1);
+    motorRight.drive(MAX_SPEED, 1);
+  }
+  else if (direction == 4)
+  {
+    motorLeft.drive(MAX_SPEED, 1);
+    motorRight.drive(MIN_SPEED, 1);
+  }
+  else
+  {
+    motorLeft.drive(MAX_SPEED, direction);
+    motorRight.drive(MAX_SPEED, direction);
+  }
+}
+
+void backUpFromWall()
+{
+  if (distFront > MIN_DIST)
+  {
+    driveRobot(1);
+  }
+  else
+  {
+    // Stop when closer than 15 cm
+    motorLeft.emergencyStop();
+    motorRight.emergencyStop();
+    delay(1000);
+
+    bool wallBack = sensorBack.isWallApproaching();
+    if (!wallBack)
+    {
+      Serial.println("Backing up...");
+      unsigned long startTime = millis();
+
+      for (; millis() - startTime < 2000;)
+      {
+        driveRobot(2);
+
+        wallBack = sensorBack.isWallApproaching();
+        if (wallBack)
+        {
+          Serial.println("Obstacle detected while backing up!");
+          motorLeft.emergencyStop();
+          motorRight.emergencyStop();
+          break;
+        }
+
+        delay(50);
+      }
+
+      if (!wallBack)
+      {
+        Serial.println("Turning randomly...");
+        unsigned long turnStartTime = millis();
+
+        // Turn left or right randomly for 2 seconds
+        int turnDirection = random(0, 2) == 0 ? 4 : 3; // 4 = right, 3 = left
+        for (; millis() - turnStartTime < 2000;)
+        {
+          driveRobot(turnDirection);
+          delay(50); // Small delay to avoid busy-waiting
+        }
+
+        driveRobot(0); // Stop after turning
+      }
+    }
+    else
+    {
+      Serial.println("Cannot back up, obstacle detected!");
+    }
+  }
 }

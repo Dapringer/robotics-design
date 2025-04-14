@@ -3,7 +3,7 @@
 
 #include "Sensor.h"
 
-Sensor *Sensor::sensors_[4] = {nullptr, nullptr, nullptr, nullptr}; // Initialize the static array
+Sensor *Sensor::sensors_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr}; // Initialize the static array
 
 volatile unsigned long echoStart = 0;
 volatile unsigned long echoEnd = 0;
@@ -26,9 +26,6 @@ Sensor::Sensor(int id, int triggerPin, int echoPin, bool useInterrupt)
         registerSensor(this); // Register this sensor for interrupts
         switch (id_)
         {
-        case 0:
-            attachInterrupt(digitalPinToInterrupt(echoPin_), echoISR0, CHANGE);
-            break;
         case 1:
             attachInterrupt(digitalPinToInterrupt(echoPin_), echoISR1, CHANGE);
             break;
@@ -38,6 +35,9 @@ Sensor::Sensor(int id, int triggerPin, int echoPin, bool useInterrupt)
         case 3:
             attachInterrupt(digitalPinToInterrupt(echoPin_), echoISR3, CHANGE);
             break;
+        case 4:
+            attachInterrupt(digitalPinToInterrupt(echoPin_), echoISR4, CHANGE);
+            break;
         }
     }
 }
@@ -45,7 +45,7 @@ Sensor::Sensor(int id, int triggerPin, int echoPin, bool useInterrupt)
 // Register a sensor
 void Sensor::registerSensor(Sensor *sensor)
 {
-    if (sensor->id_ >= 0 && sensor->id_ < 4)
+    if (sensor->id_ >= 1 && sensor->id_ < 5)
     {
         sensors_[sensor->id_] = sensor;
     }
@@ -79,12 +79,6 @@ void Sensor::handleInterrupt(int sensorId)
     }
 }
 
-// ISR for sensor 0
-void Sensor::echoISR0()
-{
-    handleInterrupt(0);
-}
-
 // ISR for sensor 1
 void Sensor::echoISR1()
 {
@@ -103,6 +97,12 @@ void Sensor::echoISR3()
     handleInterrupt(3);
 }
 
+// ISR for sensor 4
+void Sensor::echoISR4()
+{
+    handleInterrupt(4);
+}
+
 // Trigger method for interrupt-based sensors
 void Sensor::trigger()
 {
@@ -119,7 +119,7 @@ bool Sensor::isWallApproaching()
     // Update the measurement array
     if (distance_ > 100 || distance_ <= 0)
     {
-        Serial.println("Invalid distance measurement. Ignoring.");
+        // Serial.println("Invalid distance measurement. Ignoring.");
         return false;
     }
 
@@ -147,40 +147,42 @@ bool Sensor::isWallApproaching()
     // Calculate average step change
     float avgStepChange = totalTrend / 4.0;
 
+    // Serial.print("Sensor ID: ");
+    // Serial.print(id_);
     // Print the trend info
-    Serial.print("Measurement Index: ");
-    Serial.print(measurementIndex_);
-    Serial.print(" | Newest Index: ");
-    Serial.print(newestIndex);
-    Serial.print(" | Measurements: ");
-    for (int i = 0; i < 5; i++)
-    {
-        Serial.print(measurements_[i]);
-        if (i < 4)
-        {
-            Serial.print(", ");
-        }
-    }
-    Serial.print(" | Trend: ");
-    Serial.print(avgStepChange);
-    Serial.print(" | Drops: ");
-    Serial.print(drops);
-    Serial.print(" | Distance: ");
-    Serial.print(distance_);
-    Serial.print(" | ");
+    // Serial.print("Measurement Index: ");
+    // Serial.print(measurementIndex_);
+    // Serial.print(" | Newest Index: ");
+    // Serial.print(newestIndex);
+    // Serial.print(" | Measurements: ");
+    // for (int i = 0; i < 5; i++)
+    // {
+    //     Serial.print(measurements_[i]);
+    //     if (i < 4)
+    //     {
+    //         Serial.print(", ");
+    //     }
+    // }
+    // Serial.print(" | Trend: ");
+    // Serial.print(avgStepChange);
+    // Serial.print(" | Drops: ");
+    // Serial.print(drops);
+    // Serial.print(" | Distance: ");
+    // Serial.print(distance_);
+    // Serial.print(" | ");
 
-    // Smart detection criteria:
-    // If we have 3 or more drops and the average step change is negative enough, it's a wall.
-    if (drops >= 3 && avgStepChange < -1 && distance_ < 50)
-    {
-        wallApproaching_ = true;
-        Serial.println("Wall approaching detected (smart mode)!");
-    }
-    else
-    {
-        wallApproaching_ = false;
-        Serial.println("No wall detected.");
-    }
+    // // Smart detection criteria:
+    // // If we have 3 or more drops and the average step change is negative enough, it's a wall.
+    // if (drops >= 3 && avgStepChange < -1 && distance_ < 50)
+    // {
+    //     wallApproaching_ = true;
+    //     Serial.println("Wall approaching detected (smart mode)!");
+    // }
+    // else
+    // {
+    //     wallApproaching_ = false;
+    //     Serial.println("No wall detected.");
+    // }
 
     return wallApproaching_;
 }

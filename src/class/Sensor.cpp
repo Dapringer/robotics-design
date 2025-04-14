@@ -117,7 +117,7 @@ bool Sensor::isWallApproaching()
 {
     readDistance();
     // Update the measurement array
-    if (distance_ > 50 || distance_ <= 0)
+    if (distance_ > 100 || distance_ <= 0)
     {
         Serial.println("Invalid distance measurement. Ignoring.");
         return false;

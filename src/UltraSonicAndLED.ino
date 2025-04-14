@@ -51,18 +51,13 @@ Sensor sensorBack(3, SENSOR_TRGGER, PIN_ECHO_B, false);
 Sensor sensorLeft(4, SENSOR_TRGGER, PIN_ECHO_L, true);
 
 const byte arduAddress = I2C_ADDRESS; // I2C address of the Arduino board
-bool dataReady = false;
 int dataReceived = 0;
 volatile bool newDataAvailable = false;
 
-void handleI2CInterrupt()
+void receiveEvent(int howMany)
 {
-  printf("I2C interrupt triggered\n");
-  dataReady = true;
-}
-
-void receiveEvent(int howMany) {
-  if (Wire.available()) {
+  if (Wire.available())
+  {
     dataReceived = Wire.read(); // Receive one byte as an integer
     newDataAvailable = true;
   }
@@ -70,64 +65,37 @@ void receiveEvent(int howMany) {
 
 void processI2CData()
 {
-  // if (dataReady) // Check if data is ready to be processed
-  // {
-  //   dataReady = false; // Reset the flag
-
-  //   if (Wire.available())
-  //   { // Check if data is available to read
-  //     /**
-  //      * Optionally, add a if statement that says "if (dataReceived == 1) { ... }"
-  //      * to handle specific data received from the I2C bus.
-  //      * */
-  //     dataReceived = Wire.read(); // Read the data from the I2C bus
-  //     Serial.print("Data received: ");
-  //     Serial.println(dataReceived);
-
-  //     if (dataReceived)
-  //     {
-  //       // Check if the received data is a command to stop the motors
-  //       switch (dataReceived)
-  //       {
-  //       case 0: // Stop both motors
-  //         driveRobot(0);
-  //         break;
-  //       case 1: // Move forward
-  //         driveRobot(1);
-  //         break;
-  //       case 2: // Move backward
-  //         driveRobot(2);
-  //         break;
-  //       case 3: // Turn left
-  //         driveRobot(3);
-  //         break;
-  //       case 4: // Turn right
-  //         driveRobot(4);
-  //         break;
-  //       default: // Invalid command
-  //         Serial.println("Invalid command received!");
-  //         break;
-  //       }
-  //     }
-  //   }
-
-  //   dataReady = false;
-  // }
-
-  if (newDataAvailable) {
+  if (newDataAvailable)
+  {
     newDataAvailable = false; // Reset the flag immediately
     Serial.print("Arduino received (polling): ");
     Serial.println(dataReceived);
 
     // Execute different functions based on the dataReceived
-    if (dataReceived == 10) {
-
-    } else if (dataReceived == 25) {
-
-    } else if (dataReceived == 5) {
-
-    } else {
-      Serial.println("Unknown data received!");
+    if (dataReceived)
+    {
+      // Check if the received data is a command to stop the motors
+      switch (dataReceived)
+      {
+      case 0: // Stop both motors
+        driveRobot(0);
+        break;
+      case 1: // Move forward
+        driveRobot(1);
+        break;
+      case 2: // Move backward
+        driveRobot(2);
+        break;
+      case 3: // Turn left
+        driveRobot(3);
+        break;
+      case 4: // Turn right
+        driveRobot(4);
+        break;
+      default: // Invalid command
+        Serial.println("Invalid command received!");
+        break;
+      }
     }
   }
 }
@@ -135,7 +103,7 @@ void processI2CData()
 void setup()
 {
   Serial.begin(9600);
-  Wire.begin(arduAddress); // Join the I2C bus as a slave
+  Wire.begin(arduAddress);      // Join the I2C bus as a slave
   Wire.onReceive(receiveEvent); // Register the function for received data
   Serial.println("Arduino I2C Slave (Polling) ready...");
   // Wire.begin(arduAddress);                                                                // Initialize I2C with specified SDA and SCL pins
@@ -148,59 +116,59 @@ void loop()
 
   processI2CData(); // Process I2C data if available
 
-  bool wallFront = sensorFront.isWallApproaching();
-  bool wallRight = sensorRight.isWallApproaching();
-  bool wallLeft = sensorLeft.isWallApproaching();
+  // bool wallFront = sensorFront.isWallApproaching();
+  // bool wallRight = sensorRight.isWallApproaching();
+  // bool wallLeft = sensorLeft.isWallApproaching();
 
-  float distFront = sensorFront.getDistance();
-  float distRight = sensorRight.getDistance();
-  float distLeft = sensorLeft.getDistance();
+  // float distFront = sensorFront.getDistance();
+  // float distRight = sensorRight.getDistance();
+  // float distLeft = sensorLeft.getDistance();
 
-  if (wallFront || distFront < EMERGENCY_STOP_DISTANCE_FRONT)
-  {
-    Serial.println("Wall detected in front! Backing up...");
-    backUpFromWall();
-  }
-  else if (wallRight && wallLeft)
-  {
-    // Both sensors detect a wall – avoid the closer one
-    if (distRight < distLeft)
-    {
-      // Right is closer → steer left
-      driveRobot(3);
-    }
-    else
-    {
-      // Left is closer → steer right
-      driveRobot(4);
-    }
-  }
-  else if (wallRight)
-  {
-    // Only right detects wall → steer left
-    driveRobot(3);
-  }
-  else if (wallLeft)
-  {
-    // Only left detects wall → steer right
-    driveRobot(4);
-  }
-  else if (distFront > EMERGENCY_STOP_DISTANCE_FRONT &&
-           (distRight == 0 || distRight > EMERGENCY_STOP_DISTANCE_SIDES) &&
-           (distLeft == 0 || distLeft > EMERGENCY_STOP_DISTANCE_SIDES))
-  {
-    // No wall approaching → go straight
-    driveRobot(1);
-  }
-  else
-  {
-    // Emergency stop if any condition is unsafe
-    motorLeft.emergencyStop();
-    motorRight.emergencyStop();
-    Serial.println("Emergency stop activated!");
-  }
+  // if (wallFront || distFront < EMERGENCY_STOP_DISTANCE_FRONT)
+  // {
+  //   Serial.println("Wall detected in front! Backing up...");
+  //   backUpFromWall();
+  // }
+  // else if (wallRight && wallLeft)
+  // {
+  //   // Both sensors detect a wall – avoid the closer one
+  //   if (distRight < distLeft)
+  //   {
+  //     // Right is closer → steer left
+  //     driveRobot(3);
+  //   }
+  //   else
+  //   {
+  //     // Left is closer → steer right
+  //     driveRobot(4);
+  //   }
+  // }
+  // else if (wallRight)
+  // {
+  //   // Only right detects wall → steer left
+  //   driveRobot(3);
+  // }
+  // else if (wallLeft)
+  // {
+  //   // Only left detects wall → steer right
+  //   driveRobot(4);
+  // }
+  // else if (distFront > EMERGENCY_STOP_DISTANCE_FRONT &&
+  //          (distRight == 0 || distRight > EMERGENCY_STOP_DISTANCE_SIDES) &&
+  //          (distLeft == 0 || distLeft > EMERGENCY_STOP_DISTANCE_SIDES))
+  // {
+  //   // No wall approaching → go straight
+  //   driveRobot(1);
+  // }
+  // else
+  // {
+  //   // Emergency stop if any condition is unsafe
+  //   motorLeft.emergencyStop();
+  //   motorRight.emergencyStop();
+  //   Serial.println("Emergency stop activated!");
+  // }
 
-  Serial.println("------------------");
+  // Serial.println("------------------");
   delay(50);
 }
 
@@ -227,7 +195,7 @@ void backUpFromWall()
 {
   float distFront = sensorFront.getDistance();
 
-  if (distFront > MIN_DIST)
+  if (distFront > EMERGENCY_STOP_DISTANCE_FRONT)
   {
     driveRobot(1);
   }
@@ -244,7 +212,7 @@ void backUpFromWall()
       Serial.println("Backing up...");
       unsigned long startTime = millis();
 
-      for (; millis() - startTime < 2000;)
+      for (; millis() - startTime < 3000;)
       {
         driveRobot(2);
 

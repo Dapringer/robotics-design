@@ -52,6 +52,7 @@ Sensor sensorLeft(4, SENSOR_TRGGER, PIN_ECHO_L, true);
 const byte arduAddress = I2C_ADDRESS; // I2C address of the Arduino board
 bool dataReady = false;
 int dataReceived = 0;
+volatile bool newDataAvailable = false;
 
 void handleI2CInterrupt()
 {
@@ -61,48 +62,65 @@ void handleI2CInterrupt()
 
 void processI2CData()
 {
-  if (dataReady) // Check if data is ready to be processed
-  {
-    dataReady = false; // Reset the flag
+  // if (dataReady) // Check if data is ready to be processed
+  // {
+  //   dataReady = false; // Reset the flag
 
-    if (Wire.available())
-    { // Check if data is available to read
-      /**
-       * Optionally, add a if statement that says "if (dataReceived == 1) { ... }"
-       * to handle specific data received from the I2C bus.
-       * */
-      dataReceived = Wire.read(); // Read the data from the I2C bus
-      Serial.print("Data received: ");
-      Serial.println(dataReceived);
+  //   if (Wire.available())
+  //   { // Check if data is available to read
+  //     /**
+  //      * Optionally, add a if statement that says "if (dataReceived == 1) { ... }"
+  //      * to handle specific data received from the I2C bus.
+  //      * */
+  //     dataReceived = Wire.read(); // Read the data from the I2C bus
+  //     Serial.print("Data received: ");
+  //     Serial.println(dataReceived);
 
-      if (dataReceived)
-      {
-        // Check if the received data is a command to stop the motors
-        switch (dataReceived)
-        {
-        case 0: // Stop both motors
-          driveRobot(0);
-          break;
-        case 1: // Move forward
-          driveRobot(1);
-          break;
-        case 2: // Move backward
-          driveRobot(2);
-          break;
-        case 3: // Turn left
-          driveRobot(3);
-          break;
-        case 4: // Turn right
-          driveRobot(4);
-          break;
-        default: // Invalid command
-          Serial.println("Invalid command received!");
-          break;
-        }
-      }
+  //     if (dataReceived)
+  //     {
+  //       // Check if the received data is a command to stop the motors
+  //       switch (dataReceived)
+  //       {
+  //       case 0: // Stop both motors
+  //         driveRobot(0);
+  //         break;
+  //       case 1: // Move forward
+  //         driveRobot(1);
+  //         break;
+  //       case 2: // Move backward
+  //         driveRobot(2);
+  //         break;
+  //       case 3: // Turn left
+  //         driveRobot(3);
+  //         break;
+  //       case 4: // Turn right
+  //         driveRobot(4);
+  //         break;
+  //       default: // Invalid command
+  //         Serial.println("Invalid command received!");
+  //         break;
+  //       }
+  //     }
+  //   }
+
+  //   dataReady = false;
+  // }
+
+  if (newDataAvailable) {
+    newDataAvailable = false; // Reset the flag immediately
+    Serial.print("Arduino received (polling): ");
+    Serial.println(dataReceived);
+
+    // Execute different functions based on the dataReceived
+    if (dataReceived == 10) {
+
+    } else if (dataReceived == 25) {
+
+    } else if (dataReceived == 5) {
+
+    } else {
+      Serial.println("Unknown data received!");
     }
-
-    dataReady = false;
   }
 }
 
@@ -117,7 +135,7 @@ void setup()
 void loop()
 {
 
-  // processI2CData(); // Process I2C data if available
+  processI2CData(); // Process I2C data if available
 
   bool wallFront = sensorFront.isWallApproaching();
   bool wallRight = sensorRight.isWallApproaching();

@@ -10,13 +10,13 @@
             "includePath": [
                 "C:/Users/frede/Documents/GitHub/robotics-design/include",
                 "C:/Users/frede/Documents/GitHub/robotics-design/src",
+                "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                 "C:/Users/frede/.platformio/packages/framework-arduino-avr/cores/arduino",
                 "C:/Users/frede/.platformio/packages/framework-arduino-avr/variants/mega",
                 "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
                 "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                 "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
                 "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
-                "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                 ""
             ],
             "browse": {
@@ -24,13 +24,13 @@
                 "path": [
                     "C:/Users/frede/Documents/GitHub/robotics-design/include",
                     "C:/Users/frede/Documents/GitHub/robotics-design/src",
+                    "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                     "C:/Users/frede/.platformio/packages/framework-arduino-avr/cores/arduino",
                     "C:/Users/frede/.platformio/packages/framework-arduino-avr/variants/mega",
                     "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
                     "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                     "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
                     "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
-                    "C:/Users/frede/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                     ""
                 ]
             },

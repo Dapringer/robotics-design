@@ -12,13 +12,17 @@ Motor::Motor(int id, int inPin1, int inPin2, int enPin)
 
 void Motor::drive(int speed, int direction)
 {
-    if (speed < 0 || speed > 255)
+    if ((speed < 0 || speed > 255) && direction)
     {
-        Serial.println("Invalid speed value. Must be between 0 and 255.");
+        Serial.println("Invalid speed value. Must be between 0 and 255 when driving front or back.");
         return;
     }
     switch (direction)
     {
+    case 0:
+        digitalWrite(inPin1_, LOW);
+        digitalWrite(inPin2_, LOW);
+        break;
     case 1:
         digitalWrite(inPin1_, HIGH);
         digitalWrite(inPin2_, LOW);
@@ -30,17 +34,25 @@ void Motor::drive(int speed, int direction)
     default:
         return;
     }
-    switch (id_)
+    if (direction == 0)
     {
-    case 1:
-        analogWrite(enPin_, speed);
-        break;
-    case 2:
-        analogWrite(enPin_, speed + 30);
-
-        break;
-    default:
+        analogWrite(enPin_, 0);
         return;
+    }
+    else
+    {
+        switch (id_)
+        {
+        case 1:
+            analogWrite(enPin_, speed);
+            break;
+        case 2:
+            analogWrite(enPin_, speed + 30);
+
+            break;
+        default:
+            return;
+        }
     }
 }
 

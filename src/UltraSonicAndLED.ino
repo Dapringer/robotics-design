@@ -61,6 +61,13 @@ void handleI2CInterrupt()
   dataReady = true;
 }
 
+void receiveEvent(int howMany) {
+  if (Wire.available()) {
+    dataReceived = Wire.read(); // Receive one byte as an integer
+    newDataAvailable = true;
+  }
+}
+
 void processI2CData()
 {
   // if (dataReady) // Check if data is ready to be processed
@@ -128,6 +135,9 @@ void processI2CData()
 void setup()
 {
   Serial.begin(9600);
+  Wire.begin(arduAddress); // Join the I2C bus as a slave
+  Wire.onReceive(receiveEvent); // Register the function for received data
+  Serial.println("Arduino I2C Slave (Polling) ready...");
   // Wire.begin(arduAddress);                                                                // Initialize I2C with specified SDA and SCL pins
   // pinMode(I2C_INTERRUPT_PIN, INPUT_PULLUP);                                               // Set the interrupt pin as input with pull-up resistor
   // attachInterrupt(digitalPinToInterrupt(I2C_INTERRUPT_PIN), handleI2CInterrupt, FALLING); // Attach interrupt to I2C interrupt pin

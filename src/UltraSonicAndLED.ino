@@ -34,7 +34,8 @@
 
 #define MAX_SPEED 100
 #define MIN_SPEED 50
-#define EMERGENCY_STOP_DISTANCE 5
+#define EMERGENCY_STOP_DISTANCE_SIDES 5
+#define EMERGENCY_STOP_DISTANCE_FRONT 15
 
 const int SENSOR_MAX_RANGE = 300; // in cm
 const int MIN_DIST = 15;
@@ -145,10 +146,10 @@ void loop()
   float distRight = sensorRight.getDistance();
   float distLeft = sensorLeft.getDistance();
 
-  if (wallFront)
+  if (wallFront || distFront < EMERGENCY_STOP_DISTANCE_FRONT)
   {
-    backUpFromWall();
     Serial.println("Wall detected in front! Backing up...");
+    backUpFromWall();
   }
   else if (wallRight && wallLeft)
   {
@@ -174,9 +175,9 @@ void loop()
     // Only left detects wall → steer right
     driveRobot(4);
   }
-  else if (distFront > EMERGENCY_STOP_DISTANCE &&
-           (distRight == 0 || distRight > EMERGENCY_STOP_DISTANCE) &&
-           (distLeft == 0 || distLeft > EMERGENCY_STOP_DISTANCE))
+  else if (distFront > EMERGENCY_STOP_DISTANCE_FRONT &&
+           (distRight == 0 || distRight > EMERGENCY_STOP_DISTANCE_SIDES) &&
+           (distLeft == 0 || distLeft > EMERGENCY_STOP_DISTANCE_SIDES))
   {
     // No wall approaching → go straight
     driveRobot(1);
@@ -214,6 +215,8 @@ void driveRobot(int direction)
 
 void backUpFromWall()
 {
+  float distFront = sensorFront.getDistance();
+
   if (distFront > MIN_DIST)
   {
     driveRobot(1);

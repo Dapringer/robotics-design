@@ -5,7 +5,7 @@
 #include "class/Motor.h"
 #include "class/Sensor.h"
 
-#define SENSOR_TRGGER 21
+#define SENSOR_TRGGER 4
 #define PIN_TRIGGER_F 12
 #define PIN_ECHO_F 2
 #define PIN_TRIGGER_R 21
@@ -25,7 +25,7 @@
 #define I2C_SDA 20
 #define I2C_SCL 21
 #define I2C_ADDRESS 0x08
-#define I2C_INTERRUPT_PIN 2
+#define I2C_INTERRUPT_PIN 18
 
 #define MAX_SPEED 150
 #define MIN_SPEED 75
@@ -60,15 +60,24 @@ void processI2CData()
   {
     dataReady = false; // Reset the flag
 
-    if (Wire.available()) { // Check if data is available to read
+    if (Wire.available())
+    { // Check if data is available to read
       /**
        * Optionally, add a if statement that says "if (dataReceived == 1) { ... }"
        * to handle specific data received from the I2C bus.
        * */
-
       dataReceived = Wire.read(); // Read the data from the I2C bus
       Serial.print("Data received: ");
       Serial.println(dataReceived);
+
+      if (dataReceived) {
+        // Check if the received data is a command to stop the motors
+        if (dataReceived == 0) {
+          motorRight.emergencyStop(); // Stop the right motor
+          motorLeft.emergencyStop();  // Stop the left motor
+          Serial.println("Motors stopped due to I2C command.");
+        } 
+      }
     }
 
     dataReady = false;
@@ -78,8 +87,8 @@ void processI2CData()
 void setup()
 {
   Serial.begin(9600);
-  Wire.begin(arduAddress); // Initialize I2C with specified SDA and SCL pins
-
+  Wire.begin(arduAddress);                                                                // Initialize I2C with specified SDA and SCL pins
+  pinMode(I2C_INTERRUPT_PIN, INPUT_PULLUP);                                               // Set the interrupt pin as input with pull-up resistor
   attachInterrupt(digitalPinToInterrupt(I2C_INTERRUPT_PIN), handleI2CInterrupt, FALLING); // Attach interrupt to I2C interrupt pin
 }
 
@@ -94,58 +103,7 @@ void loop()
   // sensorLeft.printStatus();
   // sensorLeft.isWallApproaching();
 
-  bool wallFront = sensorFront.isWallApproaching();
-  bool wallRight = sensorRight.isWallApproaching();
-  bool wallLeft = sensorLeft.isWallApproaching();
-  float distFront = sensorFront.getDistance();
-  float distRight = sensorRight.getDistance();
-  float distLeft = sensorLeft.getDistance();
-
   processI2CData(); // Process I2C data if available
 
-  if ((distRight > 0 && distRight <= EMERGENCY_STOP_DISTANCE) || (distLeft > 0 && distLeft <= EMERGENCY_STOP_DISTANCE) || (distFront > 0 && distFront <= 10))
-  {
-    motorLeft.emergencyStop();
-    motorRight.emergencyStop();
-    Serial.println("Emergency stop activated!");
-    return;
-  }
-
-  if (wallRight && wallLeft)
-  {
-    // Both sensors detect a wall – avoid the closer one
-    if (distRight < distLeft)
-    {
-      // Right is closer → steer left
-      motorRight.drive(MAX_SPEED, 1);
-      motorLeft.drive(MIN_SPEED, 1);
-    }
-    else
-    {
-      // Left is closer → steer right
-      motorRight.drive(MIN_SPEED, 1);
-      motorLeft.drive(MAX_SPEED, 1);
-    }
-  }
-  else if (wallRight)
-  {
-    // Only right detects wall → steer left
-    motorRight.drive(MAX_SPEED, 1);
-    motorLeft.drive(MIN_SPEED, 1);
-  }
-  else if (wallLeft)
-  {
-    // Only left detects wall → steer right
-    motorRight.drive(MIN_SPEED, 1);
-    motorLeft.drive(MAX_SPEED, 1);
-  }
-  else
-  {
-    // No wall approaching → go straight
-    motorRight.drive(MAX_SPEED, 1);
-    motorLeft.drive(MAX_SPEED, 1);
-  }
-
-  Serial.println("------------------");
   delay(50);
 }

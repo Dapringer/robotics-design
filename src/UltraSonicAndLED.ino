@@ -129,8 +129,8 @@ void loop()
 
   if (wallFront)
   {
-    backUpFromWall();
     Serial.println("Wall detected in front! Backing up...");
+    backUpFromWall();
   }
   else if (wallRight && wallLeft)
   {
@@ -196,6 +196,8 @@ void driveRobot(int direction)
 
 void backUpFromWall()
 {
+  float distFront = sensorFront.getDistance();
+
   if (distFront > MIN_DIST)
   {
     driveRobot(1);

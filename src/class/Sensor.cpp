@@ -64,17 +64,10 @@ void Sensor::handleInterrupt(int sensorId)
         if (digitalRead(sensor->getEchoPin()) == HIGH)
         {
             sensor->duration_ = micros();
-            // Serial.print("Sensor ");
-            // Serial.print(sensorId);
-            // Serial.println(": Echo start detected");
         }
         else
         {
             sensor->distance_ = (micros() - sensor->duration_) / 58.0;
-            // Serial.print("Sensor ");
-            // Serial.print(sensorId);
-            // Serial.print(": Distance calculated: ");
-            // Serial.println(sensor->distance_);
         }
     }
 }
@@ -116,15 +109,14 @@ void Sensor::trigger()
 bool Sensor::isWallApproaching()
 {
     readDistance();
-    // Update the measurement array
+    // Update the measurement array if distance is valid (higher than 50cm and not 0cm)
     if (distance_ > 50 || distance_ <= 0)
     {
-        // Serial.println("Invalid distance measurement. Ignoring.");
         return false;
     }
 
     measurements_[measurementIndex_] = distance_;
-    measurementIndex_ = (measurementIndex_ + 1) % 5; // Circular buffer
+    measurementIndex_ = (measurementIndex_ + 1) % 5;
 
     // Calculate the trend as total change and count how many drops
     int drops = 0;
@@ -147,7 +139,7 @@ bool Sensor::isWallApproaching()
     // Calculate average step change
     float avgStepChange = totalTrend / 4.0;
 
-        // Smart detection criteria:
+    // Smart detection criteria:
     // If we have 3 or more drops and the average step change is negative enough, it's a wall.
     if (drops >= 3 && avgStepChange < -1 && distance_ < 50)
     {
@@ -180,7 +172,6 @@ bool Sensor::isWallApproaching()
     else
     {
         wallApproaching_ = false;
-        // Serial.println("No wall detected.");
     }
 
     return wallApproaching_;

@@ -34,8 +34,12 @@
 
 #define MAX_SPEED 150
 #define MIN_SPEED 100
+#define TURNING_SPEED 150
+#define TURNING_TIME 500
+
 #define EMERGENCY_STOP_DISTANCE_SIDES 10
 #define EMERGENCY_STOP_DISTANCE_FRONT 20
+
 
 // const int SENSOR_MAX_RANGE = 300; // in cm
 const int MIN_DIST = 15;
@@ -53,6 +57,7 @@ Sensor sensorLeft(4, PIN_TRIGGER_L, PIN_ECHO_L, true);
 const byte arduAddress = I2C_ADDRESS; // I2C address of the Arduino board
 int dataReceived = 0;
 volatile bool newDataAvailable = false;
+bool stopOverwrite = false;
 
 bool humanInFront = false;
 
@@ -82,30 +87,37 @@ void processI2CData()
       case 0: // Stop both motors
         driveRobot(0);
         humanInFront = false; // Reset the humanInFront flag
+        stopOverwrite = true; // Set the stopOverwrite flag to true
         break;
       case 1: // Move forward
         driveRobot(1);
-        humanInFront = false; // Reset the humanInFront flag
+        humanInFront = false;  // Reset the humanInFront flag
+        stopOverwrite = false; // Reset the stopOverwrite flag
         break;
       case 2: // Move backward
         driveRobot(2);
-        humanInFront = false; // Reset the humanInFront flag
+        humanInFront = false;  // Reset the humanInFront flag
+        stopOverwrite = false; // Reset the stopOverwrite flag
         break;
       case 3: // Turn left
         driveRobot(3);
-        humanInFront = false; // Reset the humanInFront flag
+        humanInFront = false;  // Reset the humanInFront flag
+        stopOverwrite = false; // Reset the stopOverwrite flag
         break;
       case 4: // Turn right
         driveRobot(4);
-        humanInFront = false; // Reset the humanInFront flag
+        humanInFront = false;  // Reset the humanInFront flag
+        stopOverwrite = false; // Reset the stopOverwrite flag
         break;
       case 10: // Disable Walldetection in Front
         humanInFront = true;
         driveRobot(0);
         Serial.println("Human detected in front, stopping robot!");
+        stopOverwrite = false; // Set the stopOverwrite flag to true
         break;
       default: // Invalid command
         Serial.println("Invalid command received!");
+        stopOverwrite = false; // Reset the stopOverwrite flag
         break;
       }
     }
@@ -125,6 +137,12 @@ void loop()
 
   processI2CData(); // Process I2C data if available
 
+  if (stopOverwrite)
+  {
+    // If stopOverwrite is true, stop the robot and skip wall detection
+    return;
+  }
+
   bool wallFront = sensorFront.isWallApproaching();
   bool wallRight = sensorRight.isWallApproaching();
   bool wallLeft = sensorLeft.isWallApproaching();
@@ -135,7 +153,13 @@ void loop()
   float distLeft = sensorLeft.getDistance();
   float distback = sensorBack.getDistance();
 
-  if (wallFront || distFront < EMERGENCY_STOP_DISTANCE_FRONT)
+  if (wallFront || (distFront < EMERGENCY_STOP_DISTANCE_FRONT && distFront > 0))
+  {
+    // Wall detected in front → back up
+    Serial.println("Wall detected in front! Backing up...");
+    backUpFromWall();
+  }
+  else if (humanInFront && wallFront)
   {
     Serial.println("Wall detected in front! Backing up...");
     backUpFromWall();
@@ -147,34 +171,32 @@ void loop()
     {
       // Right is closer → steer left
       Serial.println("Steering left to avoid wall on the right... Right closer than left");
-      driveRobot(3);
+      turnAwayFromWall(3);
     }
     else
     {
       // Left is closer → steer right
       Serial.println("Steering right to avoid wall on the left... Left closer than right");
-      driveRobot(4);
+      turnAwayFromWall(4);
     }
   }
   else if (wallRight)
   {
     // Only right detects wall → steer left
     Serial.println("Steering left to avoid wall on the right...");
-    driveRobot(3);
+    turnAwayFromWall(3);
   }
   else if (wallLeft)
   {
     // Only left detects wall → steer right
     Serial.println("Steering right to avoid wall on the left...");
-    driveRobot(4);
+    turnAwayFromWall(4);
   }
   else if (distFront > EMERGENCY_STOP_DISTANCE_FRONT &&
            (distRight == 0 || distRight > EMERGENCY_STOP_DISTANCE_SIDES) &&
            (distLeft == 0 || distLeft > EMERGENCY_STOP_DISTANCE_SIDES))
   {
-    // No wall approaching → go straight
-    // driveRobot(1);
-    Serial.println("No wall detected, moving forward...");
+    // No wall approaching → wait for I2C Command
   }
   else
   {
@@ -192,13 +214,13 @@ void driveRobot(int direction)
 {
   if (direction == 3)
   {
-    motorLeft.drive(MIN_SPEED, 1);
-    motorRight.drive(MAX_SPEED, 1);
+    motorLeft.drive(0, 2);
+    motorRight.drive(TURNING_SPEED, 1);
   }
   else if (direction == 4)
   {
-    motorLeft.drive(MAX_SPEED, 1);
-    motorRight.drive(MIN_SPEED, 1);
+    motorLeft.drive(TURNING_SPEED, 1);
+    motorRight.drive(0, 2);
   }
   else
   {
@@ -206,6 +228,19 @@ void driveRobot(int direction)
     motorRight.drive(MAX_SPEED, direction);
     Serial.println("Driving robot in direction: " + String(direction));
   }
+}
+
+void turnAwayFromWall(int direction)
+{
+  unsigned long turnStartTime = millis();
+
+  // Turn left or right randomly for 2 seconds
+  for (; millis() - turnStartTime < TURNING_TIME;)
+  {
+    driveRobot(direction);
+  }
+
+  driveRobot(0); // Stop after turning
 }
 
 void backUpFromWall()
@@ -218,57 +253,51 @@ void backUpFromWall()
 
   float distFront = sensorFront.getDistance();
 
-  if (distFront > EMERGENCY_STOP_DISTANCE_FRONT)
+
+  motorLeft.emergencyStop();
+  motorRight.emergencyStop();
+  delay(1000);
+
+  bool wallBack = sensorBack.isWallApproaching();
+  if (!wallBack)
   {
-    driveRobot(1);
+    Serial.println("Backing up...");
+    unsigned long startTime = millis();
+
+    for (; millis() - startTime < 3000;)
+    {
+      driveRobot(2);
+
+      wallBack = sensorBack.isWallApproaching();
+      if (wallBack)
+      {
+        Serial.println("Obstacle detected while backing up!");
+        motorLeft.emergencyStop();
+        motorRight.emergencyStop();
+        break;
+      }
+
+      delay(50);
+    }
+
+    if (!wallBack)
+    {
+      Serial.println("Turning randomly...");
+      unsigned long turnStartTime = millis();
+
+      // Turn left or right randomly for 2 seconds
+      int turnDirection = random(0, 2) == 0 ? 4 : 3; // 4 = right, 3 = left
+      for (; millis() - turnStartTime < 2000;)
+      {
+        driveRobot(turnDirection);
+        delay(50); // Small delay to avoid busy-waiting
+      }
+
+      driveRobot(0); // Stop after turning
+    }
   }
   else
   {
-    motorLeft.emergencyStop();
-    motorRight.emergencyStop();
-    delay(1000);
-
-    bool wallBack = sensorBack.isWallApproaching();
-    if (!wallBack)
-    {
-      Serial.println("Backing up...");
-      unsigned long startTime = millis();
-
-      for (; millis() - startTime < 3000;)
-      {
-        driveRobot(2);
-
-        wallBack = sensorBack.isWallApproaching();
-        if (wallBack)
-        {
-          Serial.println("Obstacle detected while backing up!");
-          motorLeft.emergencyStop();
-          motorRight.emergencyStop();
-          break;
-        }
-
-        delay(50);
-      }
-
-      if (!wallBack)
-      {
-        Serial.println("Turning randomly...");
-        unsigned long turnStartTime = millis();
-
-        // Turn left or right randomly for 2 seconds
-        int turnDirection = random(0, 2) == 0 ? 4 : 3; // 4 = right, 3 = left
-        for (; millis() - turnStartTime < 2000;)
-        {
-          driveRobot(turnDirection);
-          delay(50); // Small delay to avoid busy-waiting
-        }
-
-        driveRobot(0); // Stop after turning
-      }
-    }
-    else
-    {
-      Serial.println("Cannot back up, obstacle detected!");
-    }
+    Serial.println("Cannot back up, obstacle detected!");
   }
 }

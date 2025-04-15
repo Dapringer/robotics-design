@@ -117,7 +117,7 @@ bool Sensor::isWallApproaching()
 {
     readDistance();
     // Update the measurement array
-    if (distance_ > 100 || distance_ <= 0)
+    if (distance_ > 50 || distance_ <= 0)
     {
         // Serial.println("Invalid distance measurement. Ignoring.");
         return false;
@@ -147,42 +147,41 @@ bool Sensor::isWallApproaching()
     // Calculate average step change
     float avgStepChange = totalTrend / 4.0;
 
-    // Serial.print("Sensor ID: ");
-    // Serial.print(id_);
-    // Print the trend info
-    // Serial.print("Measurement Index: ");
-    // Serial.print(measurementIndex_);
-    // Serial.print(" | Newest Index: ");
-    // Serial.print(newestIndex);
-    // Serial.print(" | Measurements: ");
-    // for (int i = 0; i < 5; i++)
-    // {
-    //     Serial.print(measurements_[i]);
-    //     if (i < 4)
-    //     {
-    //         Serial.print(", ");
-    //     }
-    // }
-    // Serial.print(" | Trend: ");
-    // Serial.print(avgStepChange);
-    // Serial.print(" | Drops: ");
-    // Serial.print(drops);
-    // Serial.print(" | Distance: ");
-    // Serial.print(distance_);
-    // Serial.print(" | ");
-
-    // // Smart detection criteria:
-    // // If we have 3 or more drops and the average step change is negative enough, it's a wall.
-    // if (drops >= 3 && avgStepChange < -1 && distance_ < 50)
-    // {
-    //     wallApproaching_ = true;
-    //     Serial.println("Wall approaching detected (smart mode)!");
-    // }
-    // else
-    // {
-    //     wallApproaching_ = false;
-    //     Serial.println("No wall detected.");
-    // }
+        // Smart detection criteria:
+    // If we have 3 or more drops and the average step change is negative enough, it's a wall.
+    if (drops >= 3 && avgStepChange < -1 && distance_ < 50)
+    {
+        wallApproaching_ = true;
+        Serial.print("Sensor ID: ");
+        Serial.print(id_);
+        Serial.print(" | Measurement Index: ");
+        Serial.print(measurementIndex_);
+        Serial.print(" | Newest Index: ");
+        Serial.print(newestIndex);
+        Serial.print(" | Measurements: ");
+        for (int i = 0; i < 5; i++)
+        {
+            Serial.print(measurements_[i]);
+            if (i < 4)
+            {
+                Serial.print(", ");
+            }
+        }
+        Serial.print(" | Trend: ");
+        Serial.print(avgStepChange);
+        Serial.print(" | Drops: ");
+        Serial.print(drops);
+        Serial.print(" | Distance: ");
+        Serial.print(distance_);
+        Serial.print(" | ");
+        Serial.print("Wall approaching detected (smart mode) by Sensor ID: ");
+        Serial.println(id_);
+    }
+    else
+    {
+        wallApproaching_ = false;
+        // Serial.println("No wall detected.");
+    }
 
     return wallApproaching_;
 }

@@ -2,14 +2,17 @@
 
 #include <Arduino.h>
 
-#define MOTOR_2_OFFSET 30 // Offset for motor 2 speed
+#define MOTOR_2_OFFSET 30         // Offset for motor 2 speed
+#define ENCODER_PULSES_PER_REV 32 // Number of pulses per revolution of the motor
 
-Motor::Motor(int id, int inPin1, int inPin2, int enPin)
-    : id_(id), inPin1_(inPin1), inPin2_(inPin2), enPin_(enPin)
+Motor::Motor(int id, int inPin1, int inPin2, int enPin, int encoderAPin, int encoderBPin)
+    : id_(id), inPin1_(inPin1), inPin2_(inPin2), enPin_(enPin), encoderAPin_(encoderAPin), encoderBPin_(encoderBPin), encoderCount_(0), lastSpeedCalcTime_(0), speed_(0.0f)
 {
     pinMode(inPin1_, OUTPUT);
     pinMode(inPin2_, OUTPUT);
     pinMode(enPin_, OUTPUT);
+    pinMode(encoderAPin_, INPUT);
+    pinMode(encoderBPin_, INPUT);
 }
 
 void Motor::drive(int speed, int direction)
@@ -71,4 +74,25 @@ void Motor::emergencyStop()
     digitalWrite(inPin1_, LOW);
     digitalWrite(inPin2_, LOW);
     analogWrite(enPin_, 0);
+}
+
+float Motor::getSpeed()
+{
+    unsigned long currentTime = millis();
+    unsigned long elapsedTime = currentTime - lastSpeedCalcTime_;
+
+    if (encoderCount_ >= ENCODER_PULSES_PER_REV)
+    {
+        // Calculate speed in rotations per second (RPS)
+        speed_ = (float)encoderCount_ / ENCODER_PULSES_PER_REV / (elapsedTime / 1000.0f) * 60.0f;
+        encoderCount_ = 0;                // Reset the encoder count after calculating speed
+        lastSpeedCalcTime_ = currentTime; // Update the last speed calculation time
+        speed_ = speed_ / 131;
+        Serial.print("Motor ID: ");
+        Serial.print(id_);
+        Serial.print(" |  Speed: ");
+        Serial.println(speed_);
+    }
+
+    return speed_;
 }

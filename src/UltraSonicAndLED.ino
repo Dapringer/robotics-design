@@ -21,6 +21,11 @@
 #define In4 12
 #define EnB 13
 
+#define Motor1EncA 2
+#define Motor1EncB 3
+#define Motor2EncA 4
+#define Motor2EncB 5
+
 #define I2C_SDA 20
 #define I2C_SCL 21
 #define I2C_ADDRESS 0x08
@@ -33,8 +38,8 @@
 #define EMERGENCY_STOP_DISTANCE_SIDES 10
 #define EMERGENCY_STOP_DISTANCE_FRONT 20
 
-Motor motorRight(1, In1, In2, EnA);
-Motor motorLeft(2, In3, In4, EnB);
+Motor motorRight(1, In1, In2, EnA, Motor1EncA, Motor1EncB);
+Motor motorLeft(2, In3, In4, EnB, Motor2EncA, Motor2EncB);
 
 Sensor sensorFront(1, PIN_TRIGGER_F, PIN_ECHO_F, true);
 Sensor sensorRight(2, PIN_TRIGGER_R, PIN_ECHO_R, true);
@@ -143,12 +148,34 @@ void processI2CData()
   }
 }
 
+void updateLeftEncoder()
+{
+  motorLeft.encoderCount_++;
+  // Serial.print("Left Encoder Count: ");
+  // Serial.println(motorLeft.encoderCount_);
+  // Serial.print("Left Motor Speed: ");
+  motorLeft.getSpeed();
+}
+
+void updateRightEncoder()
+{
+  motorRight.encoderCount_++;
+  Serial.print("Right Encoder Count: ");
+  Serial.println(motorRight.encoderCount_);
+}
+
 void setup()
 {
   Serial.begin(9600);
   Wire.begin(arduAddress);      // Join the I2C bus as a slave
   Wire.onReceive(receiveEvent); // Register the function for received data
   Serial.println("Arduino I2C Slave (Polling) ready...");
+
+  attachInterrupt(digitalPinToInterrupt(Motor1EncA), updateLeftEncoder, RISING);
+  attachInterrupt(digitalPinToInterrupt(Motor1EncB), updateLeftEncoder, RISING);
+
+  attachInterrupt(digitalPinToInterrupt(Motor2EncA), updateRightEncoder, RISING);
+  attachInterrupt(digitalPinToInterrupt(Motor2EncB), updateRightEncoder, RISING);
 }
 
 void loop()

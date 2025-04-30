@@ -11,6 +11,10 @@ private:
     int inPin1_;
     int inPin2_;
     int enPin_;
+    int encoderAPin_;
+    int encoderBPin_;
+    unsigned long lastSpeedCalcTime_; // Last time speed was calculated
+    float speed_;                     // Speed in rotations per second (RPS)
 
     // enum Direction
     // {
@@ -26,10 +30,14 @@ private:
     // };
 
 public:
-    Motor(int id, int inPin1, int inPin2, int enPin);
+    Motor(int id, int inPin1, int inPin2, int enPin, int encoderAPin, int encoderBPin);
 
     void drive(int speed, int direction);
     void emergencyStop();
+    float getSpeed();
+    int encoderCount_;
+    int phaseA_;
+    int phaseB_;
 };
 
 #endif // MOTOR_H

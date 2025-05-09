@@ -1,4 +1,4 @@
-# Robotics Design MotorBoard Project
+# Robotics Design MotorBoard Arduino Project
 
 This project is designed to control a robotic system using an ATmega2560 microcontroller. The system includes motor control, ultrasonic sensors, and LED indicators. The code is written in C++ and uses the PlatformIO ecosystem for development and deployment.
 
@@ -17,10 +17,12 @@ This project is designed to control a robotic system using an ATmega2560 microco
 ## Features
 
 1. **Motor Control**:
+
    - Two motors are controlled using PWM signals.
    - Encoders are used for feedback to measure speed and distance.
 
 2. **Ultrasonic Sensors**:
+
    - Detect obstacles and measure distances.
 
 3. **LED Indicators**:
@@ -29,12 +31,15 @@ This project is designed to control a robotic system using an ATmega2560 microco
 ## Setting Up the Project
 
 1. **Install PlatformIO**:
+
    - Install the PlatformIO extension in Visual Studio Code.
 
 2. **Clone the Repository**:
+
    - Clone this repository to your local machine.
 
 3. **Open the Project**:
+
    - Open the project folder in Visual Studio Code.
 
 4. **Select the Environment**:
@@ -43,6 +48,7 @@ This project is designed to control a robotic system using an ATmega2560 microco
 ## Uploading the Code
 
 1. **Check the COM Port**:
+
    - Connect your ATmega2560 board to your computer via USB.
    - Open the PlatformIO terminal and run the following command to list available COM ports:
      ```
@@ -51,6 +57,7 @@ This project is designed to control a robotic system using an ATmega2560 microco
    - Identify the COM port for your board (e.g., `COM6`).
 
 2. **Update the COM Port**:
+
    - Open the `platformio.ini` file and update the `upload_port` parameter with the correct COM port:
      ```
      upload_port = COM6

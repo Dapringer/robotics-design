@@ -29,7 +29,7 @@
 #define MAX_SPEED 150
 #define MIN_SPEED 50
 #define TURNING_SPEED 150
-#define TURNING_TIME 500
+// #define TURNING_TIME 500
 
 // Initialize the motors
 Motor motorLeft(1, M1_PWM, M1_DIR, Motor1EncA, Motor1EncB);
@@ -98,35 +98,48 @@ void processI2CData()
       driveRobot(0);
       humanInFront = false; // Reset the humanInFront flag
       stopOverwrite = true; // Set the stopOverwrite flag to true
+      Serial2.println("humanInFront = false");
+      Serial2.println("stopOverwrite = true");
       break;
     case 101: // Disable Walldetection in Front
-      humanInFront = true;
       driveRobot(0);
       Serial.println("Human detected in front, stopping robot!");
+      humanInFront = true;
       stopOverwrite = false; // Set the stopOverwrite flag to true
+      Serial2.println("humanInFront = true");
+      Serial2.println("stopOverwrite = false");
       break;
     case 102: // Turn left
       driveRobot(3);
       humanInFront = false;  // Reset the humanInFront flag
       stopOverwrite = false; // Reset the stopOverwrite flag
+      Serial2.println("humanInFront = false");
+      Serial2.println("stopOverwrite = false");
       break;
     case 103: // Turn right
       driveRobot(4);
       humanInFront = false;  // Reset the humanInFront flag
       stopOverwrite = false; // Reset the stopOverwrite flag
+      Serial2.println("humanInFront = false");
+      Serial2.println("stopOverwrite = false");
       break;
     case 104: // Move forward
       driveRobot(1);
       humanInFront = false;  // Reset the humanInFront flag
       stopOverwrite = false; // Reset the stopOverwrite flag
+      Serial2.println("humanInFront = false");
+      Serial2.println("stopOverwrite = false");
       break;
     case 105: // Move backward
       driveRobot(2);
       humanInFront = false;  // Reset the humanInFront flag
       stopOverwrite = false; // Reset the stopOverwrite flag
+      Serial2.println("humanInFront = false");
+      Serial2.println("stopOverwrite = false");
       break;
     default:                 // Invalid command
       stopOverwrite = false; // Reset the stopOverwrite flag
+      Serial2.println("stopOverwrite = false");
       break;
     }
   }
@@ -151,6 +164,7 @@ void updateRightEncoder()
 void setup()
 {
   Serial.begin(9600);
+  Serial2.begin(9600);
   Wire.begin(arduAddress);      // Join the I2C bus as a slave
   Wire.onReceive(receiveEvent); // Register the function for received data
   Serial.println("Arduino I2C Slave (Polling) ready...");
@@ -164,69 +178,78 @@ void setup()
 
 void loop()
 {
+  // Check if data is available from Sensor Board
+  if (Serial2.available() > 0)
+  {
+    String command = Serial2.readStringUntil('\n'); // Read the command
+    processSerialCommand(command);                  // Process the received command
+  }
   // Process I2C data if available
   // processI2CData();
-  
+
   // // If stopOverwrite is true skip wall detection and listen for new I2C commands
   // if (stopOverwrite)
   // {
   //   return;
   // }
 
-  // readSensors();
-
-  // if (wallFront || (distFront < EMERGENCY_STOP_DISTANCE_FRONT && distFront > 0))
-  // {
-  //   // Wall detected in front → back up
-  //   Serial.println("Wall detected in front! Backing up...");
-  //   backUpFromWall();
-  // }
-  // else if (wallRight && wallLeft)
-  // {
-  //   // Both sensors detect a wall – avoid the closer one
-  //   if (distRight < distLeft)
-  //   {
-  //     // Right is closer → steer left
-  //     Serial.println("Steering left to avoid wall on the right... Right closer than left");
-  //     avoidWall(3);
-  //   }
-  //   else
-  //   {
-  //     // Left is closer → steer right
-  //     Serial.println("Steering right to avoid wall on the left... Left closer than right");
-  //     avoidWall(4);
-  //   }
-  // }
-  // else if (wallRight)
-  // {
-  //   // Only right detects wall → steer left
-  //   Serial.println("Steering left to avoid wall on the right...");
-  //   avoidWall(3);
-  // }
-  // else if (wallLeft)
-  // {
-  //   // Only left detects wall → steer right
-  //   Serial.println("Steering right to avoid wall on the left...");
-  //   avoidWall(4);
-  // }
-  // else if (distFront > EMERGENCY_STOP_DISTANCE_FRONT &&
-  //          (distRight == 0 || distRight > EMERGENCY_STOP_DISTANCE_SIDES) &&
-  //          (distLeft == 0 || distLeft > EMERGENCY_STOP_DISTANCE_SIDES))
-  // {
-  //   // No wall approaching → wait for I2C Command
-  // }
-  // else
-  // {
-  //   // Emergency stop if any condition is unsafe
-  //   motorLeft.emergencyStop();
-  //   motorRight.emergencyStop();
-  //   Serial.println("Emergency stop activated!");
-  // }
-
-  // Serial.println("------------------");
   delay(100);
 }
 
+// Function to process the received command and execute the corresponding action
+// This function takes a string command as input and checks it against predefined commands
+// It uses the drive method of the Motor class to control the motors
+// The function also sends an acknowledgment back to the sender using Serial2
+// The acknowledgment is sent in the format "ACK:<command>"
+void processSerialCommand(String command)
+{
+  command.trim(); // Remove any leading/trailing whitespace or newline characters
+
+  if (command == "CMD:STOP")
+  {
+    motorLeft.emergencyStop();
+    motorRight.emergencyStop();
+    Serial.println("Emergency Stop Activated");
+    Serial2.println("ACK:STOP"); // Send acknowledgment
+  }
+  else if (command == "CMD:LEFT")
+  {
+    motorLeft.drive(0, 2);              // Stop left motor
+    motorRight.drive(TURNING_SPEED, 1); // Turn right motor forward
+    Serial.println("Turning Left");
+    Serial2.println("ACK:LEFT"); // Send acknowledgment
+  }
+  else if (command == "CMD:RIGHT")
+  {
+    motorLeft.drive(TURNING_SPEED, 1); // Turn left motor forward
+    motorRight.drive(0, 2);            // Stop right motor
+    Serial.println("Turning Right");
+    Serial2.println("ACK:RIGHT"); // Send acknowledgment
+  }
+  else if (command == "CMD:FORWARD")
+  {
+    motorLeft.drive(MAX_SPEED, 1); // Move both motors forward
+    motorRight.drive(MAX_SPEED, 1);
+    Serial.println("Moving Forward");
+    Serial2.println("ACK:FORWARD"); // Send acknowledgment
+  }
+  else if (command == "CMD:BACKWARD")
+  {
+    motorLeft.drive(MAX_SPEED, 2); // Move both motors backward
+    motorRight.drive(MAX_SPEED, 2);
+    Serial.println("Moving Backward");
+    Serial2.println("ACK:BACKWARD"); // Send acknowledgment
+  }
+  else
+  {
+    Serial.print("Unknown Command: ");
+    Serial.println(command);
+    Serial2.println("ACK:UNKNOWN"); // Send acknowledgment for unknown command
+  }
+}
+
+// Function to drive the robot with proportional speed based on the received value
+// This function takes a float value as input and adjusts the motor speeds accordingly
 void driveWithProportionalSpeed(float value)
 {
   // Define the maximum speed difference
@@ -250,6 +273,10 @@ void driveWithProportionalSpeed(float value)
   Serial.println(rightMotorSpeed);
 }
 
+// Function to drive the robot in a specific direction
+// This function takes an integer direction as input and drives the motors accordingly
+// The direction can be 0 (stop), 1 (forward), 2 (backward), 3 (turn left), or 4 (turn right)
+// The function uses the drive method of the Motor class to control the motors
 void driveRobot(int direction)
 {
   if (direction == 3)
@@ -270,82 +297,4 @@ void driveRobot(int direction)
     motorRight.drive(MAX_SPEED, direction);
     // Serial.println("Driving robot in direction: " + String(direction));
   }
-}
-
-// Avoid wall by turning left or right for a short time
-void avoidWall(int direction)
-{
-  unsigned long turnStartTime = millis();
-
-  for (; millis() - turnStartTime < TURNING_TIME;)
-  {
-    driveRobot(direction);
-  }
-
-  driveRobot(0);
-}
-
-// Back up from wall if detected in front. Sequence is as follows:
-// 1. If Human in Front, do nothing
-// 2. Stop motors for 1 second
-// 3. If no wall in Back, back up for 3 seconds
-// 4. If wall detected, emergency Stop
-// 5. Otherwise turn randomly for 2 seconds
-// 6. Stop motors
-void backUpFromWall()
-{
-  // if (humanInFront)
-  // {
-  //   Serial.println("Human detected in front, not backing up!");
-  //   return;
-  // }
-
-  // float distFront = sensorFront.getDistance();
-
-  // motorLeft.emergencyStop();
-  // motorRight.emergencyStop();
-  // delay(1000);
-
-  // bool wallBack = sensorBack.isWallApproaching();
-  // if (!wallBack)
-  // {
-  //   Serial.println("Backing up...");
-  //   unsigned long startTime = millis();
-
-  //   for (; millis() - startTime < 3000;)
-  //   {
-  //     driveRobot(2);
-
-  //     wallBack = sensorBack.isWallApproaching();
-  //     if (wallBack)
-  //     {
-  //       Serial.println("Obstacle detected while backing up!");
-  //       motorLeft.emergencyStop();
-  //       motorRight.emergencyStop();
-  //       break;
-  //     }
-
-  //     delay(50);
-  //   }
-
-  //   if (!wallBack)
-  //   {
-  //     Serial.println("Turning randomly...");
-  //     unsigned long turnStartTime = millis();
-
-  //     // Turn left or right randomly for 2 seconds
-  //     int turnDirection = random(0, 2) == 0 ? 4 : 3; // 4 = right, 3 = left
-  //     for (; millis() - turnStartTime < 2000;)
-  //     {
-  //       driveRobot(turnDirection);
-  //       delay(50); // Small delay to avoid busy-waiting
-  //     }
-
-  //     driveRobot(0);
-  //   }
-  // }
-  // else
-  // {
-  //   Serial.println("Cannot back up, obstacle detected!");
-  // }
 }

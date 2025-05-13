@@ -18,7 +18,7 @@
 #define EMERGENCY_STOP_DISTANCE_SIDES 10
 #define EMERGENCY_STOP_DISTANCE_FRONT 20
 
-#define TURNING_TIME 500
+#define TURNING_TIME 100
 
 // Initialize the sensors
 Sensor sensorFront(1, PIN_TRIGGER_F, PIN_ECHO_F, true);
@@ -40,6 +40,8 @@ float distback = 0;
 
 bool stopOverwrite = false;
 bool humanInFront = false;
+
+const int ACK_ATTEMPTS = 5;
 
 void setup()
 {
@@ -74,7 +76,7 @@ void loop()
 
   readSensors();
 
-  if (distFront < 20)
+  if (distFront < 20 && distFront > 0)
   {
     sendCommandWithAck(0); // Send emergency stop command
   }
@@ -123,7 +125,8 @@ void loop()
   {
     // Emergency stop if any condition is unsafe
     sendCommandWithAck(0);
-    Serial.println("Emergency stop activated!");
+    Serial.print("Emergency stop activated!  |  ");
+    Serial.println("distFront: " + String(distFront));
   }
 
   // Serial.println("------------------");
@@ -167,7 +170,7 @@ void sendCommandWithAck(int direction)
   bool ackReceived = false;
 
   int attempts = 0;
-  while (!ackReceived && attempts < 3)
+  while (!ackReceived && attempts < ACK_ATTEMPTS)
   {
     switch (direction)
     {
@@ -195,22 +198,45 @@ void sendCommandWithAck(int direction)
     {
       String response = Serial2.readStringUntil('\n');
       response.trim();
-      if (response == "ACK")
+      if (response.indexOf("ACK") != -1)
       {
-        ackReceived = true;
-        break;
-      }
-    }
+        String expectedAck = "ACK:";
+        switch (direction)
+        {
+        case 0:
+          expectedAck += "STOP";
+          break;
+        case 1:
+          expectedAck += "FORWARD";
+          break;
+        case 2:
+          expectedAck += "BACKWARD";
+          break;
+        case 3:
+          expectedAck += "LEFT";
+          break;
+        case 4:
+          expectedAck += "RIGHT";
+          break;
+        default:
+          break;
+        }
 
-    if (!ackReceived)
-    {
-      attempts++;
-      delay(100); // Small delay before retrying
+        if (response == expectedAck)
+        {
+          ackReceived = true;
+          Serial.println("Acknowledgment received for command: " + String(direction));
+          break;
+        }
+      }
+      ackReceived = true;
+      break;
     }
   }
 
   if (!ackReceived)
   {
+    attempts++;
     Serial.println("Warning: No acknowledgment received for command after 3 attempts!");
   }
 }
@@ -233,7 +259,7 @@ void backUpFromWall()
   float distFront = sensorFront.getDistance();
 
   sendCommandWithAck(0);
-  delay(1000);
+  delay(500);
 
   bool wallBack = sensorBack.isWallApproaching();
   if (!wallBack)
@@ -262,8 +288,8 @@ void backUpFromWall()
       unsigned long turnStartTime = millis();
 
       // Turn left or right randomly for 2 seconds
-      int turnDirection = random(0, 2) == 0 ? 4 : 3; // 4 = right, 3 = left
-      for (; millis() - turnStartTime < 2000;)
+      int turnDirection = random(0, 1) == 0 ? 4 : 3; // 4 = right, 3 = left
+      for (; millis() - turnStartTime < TURNING_TIME;)
       {
         sendCommandWithAck(turnDirection);
         delay(50); // Small delay to avoid busy-waiting
@@ -276,4 +302,10 @@ void backUpFromWall()
   {
     Serial.println("Cannot back up, obstacle detected!");
   }
+
+  // Reset the measurement arrays for all sensors after backing up
+  sensorBack.resetMeasurements();
+  sensorFront.resetMeasurements();
+  sensorLeft.resetMeasurements();
+  sensorRight.resetMeasurements();
 }

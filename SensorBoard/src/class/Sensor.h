@@ -11,8 +11,8 @@ private:
     int echoPin_;
     unsigned long duration_;
     unsigned int distance_;
-    float measurements_[5]; // Array to store the last 10 measurements
-    int measurementIndex_;  // Index for the circular buffer
+    float measurements_[10]; // Array to store the last 10 measurements
+    int measurementIndex_;   // Index for the circular buffer
     bool useInterrupt_;
 
     static Sensor *sensors_[5]; // Fixed-size array for 4 sensors
@@ -28,9 +28,11 @@ public:
     void trigger();
     int getEchoPin() const;
 
+    void resetMeasurements(); // Reset the measurements and index
+
     static void registerSensor(Sensor *sensor); // Register a sensor
-    static void handleInterrupt(int sensorId);              // Handle interrupt for all sensors
-    
+    static void handleInterrupt(int sensorId);  // Handle interrupt for all sensors
+
     // Interrupt Service Routines (ISRs) for each sensor
     static void echoISR1();
     static void echoISR2();

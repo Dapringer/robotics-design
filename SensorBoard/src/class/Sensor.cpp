@@ -3,6 +3,12 @@
 
 #include "Sensor.h"
 
+const float MIN_AVERAGE_STEP_CHANGE = -1.0;
+const int MINIMUM_DROPS = 5;
+const int MAXIMUM_DISTANCE = 100;
+const int MINIMUM_DISTANCE = 10;
+int MEASUREMENTS_SIZE = 10;
+
 Sensor *Sensor::sensors_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr}; // Initialize the static array
 
 volatile unsigned long echoStart = 0;
@@ -15,8 +21,8 @@ Sensor::Sensor(int id, int triggerPin, int echoPin, bool useInterrupt)
 {
     pinMode(triggerPin_, OUTPUT);
     pinMode(echoPin_, INPUT);
-
-    for (int i = 0; i < 5; i++)
+    MEASUREMENTS_SIZE = sizeof(measurements_) / sizeof(measurements_[0]);
+    for (size_t i = 0; i < MEASUREMENTS_SIZE; i++)
     {
         measurements_[i] = 0;
     }
@@ -125,25 +131,25 @@ bool Sensor::isWallApproaching()
 {
     readDistance();
     // Update the measurement array if distance is valid (higher than 50cm and not 0cm)
-    if (distance_ > 50 || distance_ <= 0)
+    if (distance_ > MAXIMUM_DISTANCE || distance_ <= MINIMUM_DISTANCE)
     {
         return false;
     }
 
     measurements_[measurementIndex_] = distance_;
-    measurementIndex_ = (measurementIndex_ + 1) % 5;
+    measurementIndex_ = (measurementIndex_ + 1) % MEASUREMENTS_SIZE;
 
     // Calculate the trend as total change and count how many drops
     int drops = 0;
     float totalTrend = 0;
 
-    int newestIndex = (measurementIndex_ - 1 + 5) % 5; // Most recent value
+    int newestIndex = (measurementIndex_ - 1 + MEASUREMENTS_SIZE) % MEASUREMENTS_SIZE; // Most recent value
 
-    // Loop over all 4 steps (between 5 values)
-    for (int i = 0; i < 4; i++)
+    // Loop over all steps in the measurements array
+    for (int i = 0; i < MEASUREMENTS_SIZE - 1; i++)
     {
-        int index1 = (measurementIndex_ + i) % 5;
-        int index2 = (measurementIndex_ + i + 1) % 5;
+        int index1 = (measurementIndex_ + i) % MEASUREMENTS_SIZE;
+        int index2 = (measurementIndex_ + i + 1) % MEASUREMENTS_SIZE;
         float stepChange = measurements_[index2] - measurements_[index1];
         if (stepChange < 0)
             drops++; // Count drops (negative changes)
@@ -152,11 +158,11 @@ bool Sensor::isWallApproaching()
     }
 
     // Calculate average step change
-    float avgStepChange = totalTrend / 4.0;
+    float avgStepChange = totalTrend / (MEASUREMENTS_SIZE - 1);
 
     // Smart detection criteria:
     // If we have 3 or more drops and the average step change is negative enough, it's a wall.
-    if (drops >= 3 && avgStepChange < -1 && distance_ < 50)
+    if (drops >= MINIMUM_DROPS && avgStepChange < MIN_AVERAGE_STEP_CHANGE && distance_ < MAXIMUM_DISTANCE)
     {
         wallApproaching_ = true;
         Serial.print("Sensor ID: ");
@@ -166,10 +172,10 @@ bool Sensor::isWallApproaching()
         Serial.print(" | Newest Index: ");
         Serial.print(newestIndex);
         Serial.print(" | Measurements: ");
-        for (int i = 0; i < 5; i++)
+        for (size_t i = 0; i < MEASUREMENTS_SIZE; i++)
         {
             Serial.print(measurements_[i]);
-            if (i < 4)
+            if (i < (MEASUREMENTS_SIZE)-1)
             {
                 Serial.print(", ");
             }
@@ -232,14 +238,29 @@ void Sensor::printStatus()
 {
     Serial.print("      Sensor ID: ");
     Serial.print(id_);
-    Serial.print("      |      Trigger Pin: ");
-    Serial.print(triggerPin_);
-    Serial.print("      |      Echo Pin: ");
-    Serial.print(echoPin_);
-    Serial.print("      |      Duration: ");
-    Serial.print(duration_);
-    Serial.print("ms      |      Distance: ");
+    Serial.print("  |   Distance: ");
     Serial.print(distance_);
-    Serial.print("cm      |      Wall Approaching: ");
+    Serial.print(" | Measurement Index: ");
+    Serial.print(measurementIndex_);
+    Serial.print(" | Measurements: ");
+    for (size_t i = 0; i < MEASUREMENTS_SIZE; i++)
+    {
+        Serial.print(measurements_[i]);
+        if (i < (MEASUREMENTS_SIZE)-1)
+        {
+            Serial.print(", ");
+        }
+    }
+    Serial.print("   |   Wall Approaching: ");
     Serial.println(wallApproaching_ ? "Yes" : "No");
+}
+
+// Add a public method to reset measurements and index
+void Sensor::resetMeasurements()
+{
+    for (size_t i = 0; i < MEASUREMENTS_SIZE; i++)
+    {
+        measurements_[i] = 0;
+    }
+    measurementIndex_ = 0;
 }

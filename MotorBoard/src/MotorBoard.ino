@@ -40,8 +40,10 @@ const byte arduAddress = I2C_ADDRESS;
 char dataReceived[32];
 volatile bool newDataAvailable = false;
 
-bool stopOverwrite = false;
 bool humanInFront = false;
+
+// Add a global variable to store the last received I2C value
+float lastI2CValue = 0.0;
 
 // receiveEvent function to handle incoming I2C data
 // This function is called when data is received from the I2C master
@@ -79,6 +81,15 @@ void processI2CData()
 
     float receivedValue = atof(dataReceived); // Always safe, even if non-numeric
 
+    // Save the received value to the global variable
+    lastI2CValue = receivedValue;
+
+    if (Serial2.available() && receivedValue != 100)
+    {
+      Serial2.println("Ignoring I2C data, Serial2 is available.");
+      return;
+    }
+
     // Check if it's a command (whole number like 100–105)
     int intValue = (int)receivedValue;
 
@@ -91,55 +102,41 @@ void processI2CData()
 
     Serial.println("Executing command based on received value...");
     // Execute different functions based on the dataReceived
-    // Check if the received data is a command to stop the motors switch (dataReceived)
     switch (intValue)
     {
     case 100: // Stop both motors
       driveRobot(0);
       humanInFront = false; // Reset the humanInFront flag
-      stopOverwrite = true; // Set the stopOverwrite flag to true
       Serial2.println("humanInFront = false");
-      Serial2.println("stopOverwrite = true");
       break;
     case 101: // Disable Walldetection in Front
       driveRobot(0);
       Serial.println("Human detected in front, stopping robot!");
       humanInFront = true;
-      stopOverwrite = false; // Set the stopOverwrite flag to true
       Serial2.println("humanInFront = true");
-      Serial2.println("stopOverwrite = false");
       break;
     case 102: // Turn left
       driveRobot(3);
-      humanInFront = false;  // Reset the humanInFront flag
-      stopOverwrite = false; // Reset the stopOverwrite flag
+      humanInFront = false; // Reset the humanInFront flag
       Serial2.println("humanInFront = false");
-      Serial2.println("stopOverwrite = false");
       break;
     case 103: // Turn right
       driveRobot(4);
-      humanInFront = false;  // Reset the humanInFront flag
-      stopOverwrite = false; // Reset the stopOverwrite flag
+      humanInFront = false; // Reset the humanInFront flag
       Serial2.println("humanInFront = false");
-      Serial2.println("stopOverwrite = false");
       break;
     case 104: // Move forward
       driveRobot(1);
-      humanInFront = false;  // Reset the humanInFront flag
-      stopOverwrite = false; // Reset the stopOverwrite flag
+      humanInFront = false; // Reset the humanInFront flag
       Serial2.println("humanInFront = false");
-      Serial2.println("stopOverwrite = false");
       break;
     case 105: // Move backward
       driveRobot(2);
-      humanInFront = false;  // Reset the humanInFront flag
-      stopOverwrite = false; // Reset the stopOverwrite flag
+      humanInFront = false; // Reset the humanInFront flag
       Serial2.println("humanInFront = false");
-      Serial2.println("stopOverwrite = false");
       break;
-    default:                 // Invalid command
-      stopOverwrite = false; // Reset the stopOverwrite flag
-      Serial2.println("stopOverwrite = false");
+    default: // Invalid command
+      Serial2.println("Invalid command");
       break;
     }
   }
@@ -178,20 +175,17 @@ void setup()
 
 void loop()
 {
-  // Check if data is available from Sensor Board
-  if (Serial2.available() > 0)
+  // Always listen to I2C and process it conditionally
+  processI2CData(); // Read I2C data to update the value if available
+
+  // If Serial2 is available, prioritize Serial commands
+  if (Serial2.available() && lastI2CValue != 100)
   {
     String command = Serial2.readStringUntil('\n'); // Read the command
-    processSerialCommand(command);                  // Process the received command
+    Serial.print("Received command: ");
+    Serial.println(command);       // Print the command to Serial Monitor
+    processSerialCommand(command); // Process the received command
   }
-  // Process I2C data if available
-  // processI2CData();
-
-  // // If stopOverwrite is true skip wall detection and listen for new I2C commands
-  // if (stopOverwrite)
-  // {
-  //   return;
-  // }
 
   delay(100);
 }
@@ -204,7 +198,6 @@ void loop()
 void processSerialCommand(String command)
 {
   command.trim(); // Remove any leading/trailing whitespace or newline characters
-
   if (command == "CMD:STOP")
   {
     motorLeft.emergencyStop();
@@ -242,8 +235,6 @@ void processSerialCommand(String command)
   }
   else
   {
-    Serial.print("Unknown Command: ");
-    Serial.println(command);
     Serial2.println("ACK:UNKNOWN"); // Send acknowledgment for unknown command
   }
 }

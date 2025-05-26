@@ -20,73 +20,42 @@
 #define Motor2EncA 18
 #define Motor2EncB 19
 
-// Define the I2C pins and address
-#define I2C_SDA 20
-#define I2C_SCL 21
-#define I2C_ADDRESS 0x08
-
 // Define the speed and turning parameters
 #define MAX_SPEED 150
 #define MIN_SPEED 50
-#define TURNING_SPEED 150
+#define TURNING_SPEED 100
 // #define TURNING_TIME 500
 
 // Initialize the motors
 Motor motorLeft(1, M1_PWM, M1_DIR, Motor1EncA, Motor1EncB);
 Motor motorRight(2, M2_PWM, M2_DIR, Motor2EncA, Motor2EncB);
 
-// Initialize the I2C address and buffer
-const byte arduAddress = I2C_ADDRESS;
-char dataReceived[32];
-volatile bool newDataAvailable = false;
-
 bool humanInFront = false;
 
-// Add a global variable to store the last received I2C value
-float lastI2CValue = 0.0;
+// Add a global variable to store the last received Serial value from PI
+float lastSerialPIValue = 0.0;
 
-// receiveEvent function to handle incoming I2C data
-// This function is called when data is received from the I2C master
-// It reads the data and sets the newDataAvailable flag to true
-// The data is stored in the dataReceived array
-void receiveEvent(int howMany)
-{
-  int i = 0;
-  while (Wire.available() > 0 && i < sizeof(dataReceived) - 1)
-  {
-    char c = Wire.read();
-    if (c != '\0')
-    { // skip null characters
-      dataReceived[i++] = c;
-    }
-  }
-  dataReceived[i] = '\0';
-  newDataAvailable = true;
-}
-
-// processI2CData function to process the received I2C data
+// processSerialData function to process the received Serial data
 // This function is called in the loop() function to check if new data is available
 // If new data is available, it processes the data and executes the corresponding command
 // It also handles the case where the received data is a float value for proportional speed control
 // It uses the atof function to convert the string to a float value
 // and checks if the value is within the range of -10 to 10
 // If the value is within this range, it drives the robot with proportional speed
-void processI2CData()
+void processSerialData()
 {
-  if (newDataAvailable)
+  if (Serial.available())
   {
-    newDataAvailable = false; // Reset the flag immediately
-    Serial.print("Arduino received (polling): ");
-    Serial.println(dataReceived);
 
-    float receivedValue = atof(dataReceived); // Always safe, even if non-numeric
+    String command = Serial.readStringUntil('\n'); // Read the command
+    float receivedValue = command.toFloat();       // Convert string to float
 
     // Save the received value to the global variable
-    lastI2CValue = receivedValue;
+    lastSerialPIValue = receivedValue;
 
     if (Serial2.available() && receivedValue != 100)
     {
-      Serial2.println("Ignoring I2C data, Serial2 is available.");
+      Serial2.println("Ignoring Serial data from PI, Serial2 is available.");
       return;
     }
 
@@ -95,12 +64,11 @@ void processI2CData()
 
     if (receivedValue > -10 && receivedValue < 10 && receivedValue != 0)
     {
-      Serial.println("Driving with proportional speed...");
       driveWithProportionalSpeed(receivedValue);
       return;
     }
 
-    Serial.println("Executing command based on received value...");
+    Serial.println("Executing command based on received value: " + String(receivedValue));
     // Execute different functions based on the dataReceived
     switch (intValue)
     {
@@ -160,31 +128,29 @@ void updateRightEncoder()
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200); // Initialize Serial communication at 115200 baud rate
   Serial2.begin(9600);
-  Wire.begin(arduAddress);      // Join the I2C bus as a slave
-  Wire.onReceive(receiveEvent); // Register the function for received data
-  Serial.println("Arduino I2C Slave (Polling) ready...");
 
   attachInterrupt(digitalPinToInterrupt(Motor1EncA), updateLeftEncoder, RISING);
   attachInterrupt(digitalPinToInterrupt(Motor1EncB), updateLeftEncoder, RISING);
 
   attachInterrupt(digitalPinToInterrupt(Motor2EncA), updateRightEncoder, RISING);
   attachInterrupt(digitalPinToInterrupt(Motor2EncB), updateRightEncoder, RISING);
+  Serial.println("Arduino Motor Board Setup");
 }
 
 void loop()
 {
-  // Always listen to I2C and process it conditionally
-  processI2CData(); // Read I2C data to update the value if available
+  // Always listen to Serial from PI and process it conditionally
+  processSerialData(); // Read Serial data to update the value if available
 
   // If Serial2 is available, prioritize Serial commands
-  if (Serial2.available() && lastI2CValue != 100)
+  if (Serial2.available() && lastSerialPIValue != 100)
   {
     String command = Serial2.readStringUntil('\n'); // Read the command
-    Serial.print("Received command: ");
-    Serial.println(command);       // Print the command to Serial Monitor
-    processSerialCommand(command); // Process the received command
+    Serial.print("Received command from Serial2: ");
+    Serial.println(command);                  // Print the command to Serial Monitor
+    processSerialCommandFromSensors(command); // Process the received command
   }
 
   delay(100);
@@ -195,47 +161,41 @@ void loop()
 // It uses the drive method of the Motor class to control the motors
 // The function also sends an acknowledgment back to the sender using Serial2
 // The acknowledgment is sent in the format "ACK:<command>"
-void processSerialCommand(String command)
+void processSerialCommandFromSensors(String command)
 {
-  command.trim(); // Remove any leading/trailing whitespace or newline characters
-  if (command == "CMD:STOP")
+  command.trim();                  // Remove any leading/trailing whitespace or newline characters
+  int direction = command.toInt(); // Convert the command to an integer
+
+  switch (direction)
   {
+  case 0: // Stop
     motorLeft.emergencyStop();
     motorRight.emergencyStop();
-    Serial.println("Emergency Stop Activated");
-    Serial2.println("ACK:STOP"); // Send acknowledgment
-  }
-  else if (command == "CMD:LEFT")
-  {
-    motorLeft.drive(0, 2);              // Stop left motor
-    motorRight.drive(TURNING_SPEED, 1); // Turn right motor forward
-    Serial.println("Turning Left");
-    Serial2.println("ACK:LEFT"); // Send acknowledgment
-  }
-  else if (command == "CMD:RIGHT")
-  {
-    motorLeft.drive(TURNING_SPEED, 1); // Turn left motor forward
-    motorRight.drive(0, 2);            // Stop right motor
-    Serial.println("Turning Right");
-    Serial2.println("ACK:RIGHT"); // Send acknowledgment
-  }
-  else if (command == "CMD:FORWARD")
-  {
-    motorLeft.drive(MAX_SPEED, 1); // Move both motors forward
+    Serial.println("Stopping because of command 0 from Serial2");
+    break;
+  case 1: // Drive forward
+    motorLeft.drive(MAX_SPEED, 1);
     motorRight.drive(MAX_SPEED, 1);
-    Serial.println("Moving Forward");
-    Serial2.println("ACK:FORWARD"); // Send acknowledgment
-  }
-  else if (command == "CMD:BACKWARD")
-  {
-    motorLeft.drive(MAX_SPEED, 2); // Move both motors backward
+    Serial.println("Driving Forward because of command 1 from Serial2");
+    break;
+  case 2: // Drive backward
+    motorLeft.drive(MAX_SPEED, 2);
     motorRight.drive(MAX_SPEED, 2);
-    Serial.println("Moving Backward");
-    Serial2.println("ACK:BACKWARD"); // Send acknowledgment
-  }
-  else
-  {
-    Serial2.println("ACK:UNKNOWN"); // Send acknowledgment for unknown command
+    Serial.println("Driving Backward because of command 2 from Serial2");
+    break;
+  case 3: // Turn left
+    motorLeft.drive(0, 2);
+    motorRight.drive(TURNING_SPEED, 1);
+    Serial.println("Turning Left because of command 3 from Serial2");
+    break;
+  case 4: // Turn right
+    motorLeft.drive(TURNING_SPEED, 1);
+    motorRight.drive(0, 2);
+    Serial.println("Turning Right because of command 4 from Serial2");
+    break;
+  default:
+    Serial.println("Invalid Direction Command from Serial2: " + command);
+    break;
   }
 }
 
@@ -258,9 +218,10 @@ void driveWithProportionalSpeed(float value)
   motorRight.drive(rightMotorSpeed, 1); // Forward
 
   // Debug output
+  Serial.print("Driving with proportional speed  | ");
   Serial.print("Left Motor Speed: ");
-  Serial.println(leftMotorSpeed);
-  Serial.print("Right Motor Speed: ");
+  Serial.print(leftMotorSpeed);
+  Serial.print("  |  Right Motor Speed: ");
   Serial.println(rightMotorSpeed);
 }
 

@@ -34,13 +34,13 @@ void Motor::drive(int speed, int direction)
         break;
 
     case 1: // Forward
-        digitalWrite(dirPin_, HIGH);
         analogWrite(pwmPin_, speed);
+        analogWrite(dirPin_, 0);
         break;
 
     case 2: // Backward
-        digitalWrite(pwmPin_, HIGH);
         analogWrite(dirPin_, speed);
+        analogWrite(pwmPin_, 0);
         break;
 
     default:
@@ -72,10 +72,10 @@ float Motor::getSpeed()
         encoderCount_ = 0;                // Reset the encoder count after calculating speed
         lastSpeedCalcTime_ = currentTime; // Update the last speed calculation time
         speed_ = speed_ / 131;
-        Serial.print("Motor ID: ");
-        Serial.print(id_);
-        Serial.print(" |  Speed: ");
-        Serial.println(speed_);
+        // Serial.print("Motor ID: ");
+        // Serial.print(id_);
+        // Serial.print(" |  Speed: ");
+        // Serial.println(speed_);
     }
 
     return speed_;

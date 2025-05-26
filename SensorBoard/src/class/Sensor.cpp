@@ -258,9 +258,12 @@ void Sensor::printStatus()
 // Add a public method to reset measurements and index
 void Sensor::resetMeasurements()
 {
+    Serial.print("Resetting measurements for Sensor ID: ");
+    Serial.println(id_);
     for (size_t i = 0; i < MEASUREMENTS_SIZE; i++)
     {
         measurements_[i] = 0;
     }
     measurementIndex_ = 0;
+    distance_ = 0;
 }

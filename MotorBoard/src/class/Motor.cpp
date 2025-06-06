@@ -1,20 +1,49 @@
+/**
+ * Motor.cpp
+ *
+ * Implementation of the Motor class for controlling DC motors with encoder feedback.
+ *
+ * @author: Movement and Localization Outdoor Robot Team
+ */
 #include "Motor.h"
 
 #include <Arduino.h>
 
-#define ENCODER_PULSES_PER_REV 32 // Number of pulses per revolution of the motor
+/**
+ * Number of encoder pulses per revolution of the motor
+ * This value is specific to the motor/encoder combination used
+ */
+#define ENCODER_PULSES_PER_REV 32
 
+/**
+ * Constructor for the Motor class
+ * Initializes motor pins and variables, and sets up the encoder pins
+ *
+ * @param id Unique identifier for the motor
+ * @param pwmPin PWM pin for speed control
+ * @param dirPin Direction pin
+ * @param encoderAPin Encoder phase A pin
+ * @param encoderBPin Encoder phase B pin
+ */
 Motor::Motor(int id, int pwmPin, int dirPin, int encoderAPin, int encoderBPin)
     : id_(id), pwmPin_(pwmPin), dirPin_(dirPin), encoderAPin_(encoderAPin), encoderBPin_(encoderBPin), encoderCount_(0), lastSpeedCalcTime_(0), speed_(0.0f)
 {
+    // Configure pin modes
     pinMode(pwmPin_, OUTPUT);
     pinMode(dirPin_, OUTPUT);
     pinMode(encoderAPin_, INPUT);
     pinMode(encoderBPin_, INPUT);
 }
 
+/**
+ * Drive the motor with specified speed and direction
+ *
+ * @param speed Speed value (0-255)
+ * @param direction Direction (0=stop, 1=forward, 2=backward)
+ */
 void Motor::drive(int speed, int direction)
 {
+    // Validate inputs
     if (speed < 0 || speed > 255)
     {
         Serial.println("Invalid speed value. Must be between 0 and 255.");
@@ -26,6 +55,7 @@ void Motor::drive(int speed, int direction)
         return;
     }
 
+    // Set motor control signals based on direction
     switch (direction)
     {
     case 0: // Stop

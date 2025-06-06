@@ -1,3 +1,28 @@
+/**
+ * MotorBoard.ino
+ *
+ * Main file for the Motor Board of the robotics-design project.
+ * This board is responsible for controlling the robot's motors based on commands
+ * received from either the Sensor Board (via Serial2) or a Raspberry Pi (via Serial).
+ *
+ * The board prioritizes commands from the Sensor Board for emergency stops,
+ * but otherwise follows commands from the Raspberry Pi for normal operation.
+ *
+ * Communication:
+ * - Serial: Communication with Raspberry Pi (115200 baud)
+ * - Serial2: Communication with Sensor Board (9600 baud)
+ *
+ * Command Values for Serial Communication with Raspberry Pi:
+ * - 100: Stop both motors
+ * - 101: Disable wall detection (human detected in front)
+ * - 102: Turn left
+ * - 103: Turn right
+ * - 104: Move forward
+ * - 105: Move backward
+ * - -10 to 10: Proportional speed control
+ *
+ * @author: Movement and Localization Outdoor Robot Team
+ */
 #include <stdlib.h>
 #include <Arduino.h>
 #include <Wire.h>
@@ -21,19 +46,19 @@
 #define Motor2EncB 19
 
 // Define the speed and turning parameters
-#define MAX_SPEED 150
-#define MIN_SPEED 50
-#define TURNING_SPEED 100
-// #define TURNING_TIME 500
+#define MAX_SPEED 150     // Maximum motor speed (0-255)
+#define MIN_SPEED 50      // Minimum motor speed to ensure movement
+#define TURNING_SPEED 100 // Speed used for turning operations
 
 // Initialize the motors
 Motor motorLeft(1, M1_PWM, M1_DIR, Motor1EncA, Motor1EncB);
 Motor motorRight(2, M2_PWM, M2_DIR, Motor2EncA, Motor2EncB);
 
-bool humanInFront = false;
+// Control flags
+bool humanInFront = false; // Flag to indicate if a human is detected in front
 
 // Add a global variable to store the last received Serial value from PI
-float lastSerialPIValue = 0.0;
+float lastSerialPIValue = 100.0; // Default to stop command
 
 // processSerialData function to process the received Serial data
 // This function is called in the loop() function to check if new data is available
@@ -49,20 +74,23 @@ void processSerialData()
 
     String command = Serial.readStringUntil('\n'); // Read the command
     float receivedValue = command.toFloat();       // Convert string to float
+    Serial.print("Received value from Serial: ");
+    Serial.println(receivedValue); // Print the received value to Serial Monitor
 
     // Save the received value to the global variable
     lastSerialPIValue = receivedValue;
 
     if (Serial2.available() && receivedValue != 100)
     {
-      Serial2.println("Ignoring Serial data from PI, Serial2 is available.");
+      Serial2.println("Ignoring Serial data from PI, Serial2 from Arduino is available.");
       return;
     }
 
-    // Check if it's a command (whole number like 100–105)
+    // If the received value is within the range of -10 to 10, drive with proportional speed
+    // Otherwise, convert it to an integer for command execution
     int intValue = (int)receivedValue;
 
-    if (receivedValue > -10 && receivedValue < 10 && receivedValue != 0)
+    if (receivedValue > -10 && receivedValue < 10)
     {
       driveWithProportionalSpeed(receivedValue);
       return;
@@ -77,10 +105,10 @@ void processSerialData()
       humanInFront = false; // Reset the humanInFront flag
       Serial2.println("humanInFront = false");
       break;
-    case 101: // Disable Walldetection in Front
+    case 101: // Disable Walldetection in
       driveRobot(0);
       Serial.println("Human detected in front, stopping robot!");
-      humanInFront = true;
+      humanInFront = true; // Reset the humanInFront flag
       Serial2.println("humanInFront = true");
       break;
     case 102: // Turn left
@@ -145,6 +173,8 @@ void loop()
   processSerialData(); // Read Serial data to update the value if available
 
   // If Serial2 is available, prioritize Serial commands
+  // This allows the Sensor Board to send commands to stop the motors in case of emergency
+  // If the last received value is 100, it means stop command, so we don't process Serial2 commands
   if (Serial2.available() && lastSerialPIValue != 100)
   {
     String command = Serial2.readStringUntil('\n'); // Read the command
@@ -156,11 +186,9 @@ void loop()
   delay(100);
 }
 
-// Function to process the received command and execute the corresponding action
+// Function to process the received command from the Arduino SensorBoard and execute the corresponding action
 // This function takes a string command as input and checks it against predefined commands
 // It uses the drive method of the Motor class to control the motors
-// The function also sends an acknowledgment back to the sender using Serial2
-// The acknowledgment is sent in the format "ACK:<command>"
 void processSerialCommandFromSensors(String command)
 {
   command.trim();                  // Remove any leading/trailing whitespace or newline characters
@@ -204,7 +232,7 @@ void processSerialCommandFromSensors(String command)
 void driveWithProportionalSpeed(float value)
 {
   // Define the maximum speed difference
-  const int maxSpeedDifference = 100; // Adjust this value as needed
+  const int maxSpeedDifference = 100;
 
   // Calculate the speed adjustment based on the received value
   int speedAdjustment = map(value, -10, 10, -maxSpeedDifference, maxSpeedDifference);

@@ -1,35 +1,60 @@
+/**
+ * Sensor.cpp
+ *
+ * Implementation of the Sensor class for ultrasonic distance measurement
+ * and wall approach detection.
+ *
+ * @author: Movement and Localization Outdoor Robot Team
+ */
 #include <Arduino.h>
 #include <string.h>
 
 #include "Sensor.h"
 
-const float MIN_AVERAGE_STEP_CHANGE = -1.0;
-const int MINIMUM_DROPS = 5;
-const int MAXIMUM_DISTANCE = 100;
-const int MINIMUM_DISTANCE = 10;
-int MEASUREMENTS_SIZE = 10;
+// Wall detection algorithm constants
+const float MIN_AVERAGE_STEP_CHANGE = -1.0; // Minimum step change to indicate approaching wall
+const int MINIMUM_DROPS = 5;                // Minimum number of drops to indicate approaching wall
+const int MAXIMUM_DISTANCE = 100;           // Maximum valid distance in cm
+const int MINIMUM_DISTANCE = 10;            // Minimum valid distance in cm
+int MEASUREMENTS_SIZE = 10;                 // Size of measurement buffer
 
-Sensor *Sensor::sensors_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr}; // Initialize the static array
+// Initialize the static array of sensors
+Sensor *Sensor::sensors_[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
 
+// Variables for interrupt-based measurement
 volatile unsigned long echoStart = 0;
 volatile unsigned long echoEnd = 0;
 volatile bool echoDone = false;
 
-// Constructor
+/**
+ * Constructor for the Sensor class
+ * Initializes sensor pins and variables, and sets up interrupts if needed
+ *
+ * @param id Unique identifier for the sensor (1-4)
+ * @param triggerPin Pin for triggering the ultrasonic sensor
+ * @param echoPin Pin for receiving the echo signal
+ * @param useInterrupt Flag to use interrupt-based measurement
+ */
 Sensor::Sensor(int id, int triggerPin, int echoPin, bool useInterrupt)
     : id_(id), triggerPin_(triggerPin), echoPin_(echoPin), useInterrupt_(useInterrupt), duration_(0), distance_(0), measurementIndex_(0)
 {
+    // Configure pin modes
     pinMode(triggerPin_, OUTPUT);
     pinMode(echoPin_, INPUT);
+
+    // Initialize measurement buffer
     MEASUREMENTS_SIZE = sizeof(measurements_) / sizeof(measurements_[0]);
     for (size_t i = 0; i < MEASUREMENTS_SIZE; i++)
     {
         measurements_[i] = 0;
     }
 
+    // Set up interrupts if requested
     if (useInterrupt_)
     {
         registerSensor(this); // Register this sensor for interrupts
+
+        // Attach the appropriate interrupt handler based on sensor ID
         switch (id_)
         {
         case 1:
@@ -122,15 +147,15 @@ void Sensor::trigger()
 }
 
 // Method to check if a wall is approaching
-// This method reads the distance and updates the measurement array if the distance is valid (higher than 50cm and not 0cm)
+// This method reads the distance and updates the measurement array if the distance is valid (higher than 100cm and not 10cm)
 // It calculates the trend as total change and counts how many drops (negative changes) occur in the measurements
-// If there are 3 or more drops and the average step change is negative enough, it indicates a wall is approaching
+// If there are 5 or more drops and the average step change is negative enough, it indicates a wall is approaching
 // The method returns true if a wall is detected, otherwise false
 // It also prints the sensor ID, measurement index, newest index, measurements, trend, drops, and distance to the Serial Monitor for debugging purposes
 bool Sensor::isWallApproaching()
 {
     readDistance();
-    // Update the measurement array if distance is valid (higher than 50cm and not 0cm)
+    // Update the measurement array if distance is valid (higher than 100cm and not 10cm)
     if (distance_ > MAXIMUM_DISTANCE || distance_ <= MINIMUM_DISTANCE)
     {
         return false;
@@ -145,7 +170,7 @@ bool Sensor::isWallApproaching()
 
     int newestIndex = (measurementIndex_ - 1 + MEASUREMENTS_SIZE) % MEASUREMENTS_SIZE; // Most recent value
 
-    // Loop over all steps in the measurements array
+    // Loop over all steps in the measurements array using a circular buffer approach
     for (int i = 0; i < MEASUREMENTS_SIZE - 1; i++)
     {
         int index1 = (measurementIndex_ + i) % MEASUREMENTS_SIZE;
@@ -217,7 +242,7 @@ void Sensor::readDistance()
 
         digitalWrite(triggerPin_, LOW);
         duration_ = pulseIn(echoPin_, HIGH);
-        distance_ = duration_ / 58.0; // Convert duration to distance in cm
+        distance_ = duration_ / 58.0;
     }
 }
 

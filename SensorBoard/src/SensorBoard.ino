@@ -1,3 +1,29 @@
+/**
+ * SensorBoard.ino
+ *
+ * Main file for the Sensor Board of the robotics-design project.
+ * This board is responsible for ultrasonic sensor readings, obstacle detection,
+ * and sending control commands to the Motor Board.
+ *
+ * The board uses four ultrasonic sensors to detect obstacles in all directions
+ * and sends commands to the Motor Board to stop, turn, or navigate around obstacles.
+ *
+ * Communication:
+ * - Serial: Debug information (115200 baud)
+ * - Serial2: Commands to Motor Board (9600 baud)
+ *
+ * Command Values Sent to Motor Board:
+ * - 0: Emergency stop (obstacle detected)
+ * - 1: Move forward (no obstacles detected)
+ * - 2: Back up (obstacle ahead)
+ * - 3: Turn left (obstacle on right)
+ * - 4: Turn right (obstacle on left)
+ *
+ * Note: Advanced wall detection and avoidance algorithms are currently commented out
+ * for testing purposes. Only emergency breaking functionality is enabled.
+ *
+ * @author: Movement and Localization Outdoor Robot Team
+ */
 #include <stdlib.h>
 #include <Arduino.h>
 #include <Wire.h>
@@ -5,22 +31,23 @@
 #include "class/Sensor.h"
 
 // Pin definitions for ultrasonic sensors
-#define PIN_TRIGGER_F 22
-#define PIN_ECHO_F 2
-#define PIN_TRIGGER_R 24
-#define PIN_ECHO_R 3
-#define PIN_TRIGGER_B 26
-#define PIN_ECHO_B 18
-#define PIN_TRIGGER_L 28
-#define PIN_ECHO_L 19
+#define PIN_TRIGGER_F 22 // Front sensor trigger pin
+#define PIN_ECHO_F 2     // Front sensor echo pin
+#define PIN_TRIGGER_R 24 // Right sensor trigger pin
+#define PIN_ECHO_R 3     // Right sensor echo pin
+#define PIN_TRIGGER_B 26 // Back sensor trigger pin
+#define PIN_ECHO_B 18    // Back sensor echo pin
+#define PIN_TRIGGER_L 28 // Left sensor trigger pin
+#define PIN_ECHO_L 19    // Left sensor echo pin
 
-// Constants for emergency stop distances
-#define EMERGENCY_STOP_DISTANCE_SIDES 15
-#define EMERGENCY_STOP_DISTANCE_FRONT 30
-#define EMERGENCY_STOP_DISTANCE_BACK 20
+// Constants for emergency stop distances (in cm)
+#define EMERGENCY_STOP_DISTANCE_SIDES 15 // Side sensor threshold
+#define EMERGENCY_STOP_DISTANCE_FRONT 30 // Front sensor threshold
+#define EMERGENCY_STOP_DISTANCE_BACK 20  // Back sensor threshold
 
-#define TURNING_TIME 500
-#define BACKUP_TIME 3000
+// Timing constants (in milliseconds)
+#define TURNING_TIME 500 // Duration for turning maneuvers
+#define BACKUP_TIME 3000 // Duration for backing up
 
 // Initialize the sensors
 Sensor sensorFront(1, PIN_TRIGGER_F, PIN_ECHO_F, true);
@@ -43,18 +70,14 @@ float distBack = 0;
 // bool stopOverwrite = false;
 bool humanInFront = false;
 
-// const int ACK_ATTEMPTS = 5;
-
 void setup()
 {
-  Serial.begin(115200); // Initialize Serial for debugging
-  Serial2.begin(9600);
+  Serial.begin(9600);  // Initialize Serial communication for debugging
+  Serial2.begin(9600); // Initialize Serial2 for communication with Motor Board
 }
 
 void loop()
 {
-  readSensors(); // Read sensor distances
-
   // Check if data is available from Motor Board
   if (Serial2.available() > 0)
   {
@@ -72,12 +95,7 @@ void loop()
 
   readSensors();
 
-  if (humanInFront)
-  {
-    return;
-  }
-
-  if (distFront <= EMERGENCY_STOP_DISTANCE_FRONT && distFront != 0)
+  if (distFront < 20)
   {
     Serial2.println(0);
     Serial.print("Emergency stop activated!  |  ");
@@ -102,6 +120,19 @@ void loop()
     Serial.println("distBack: " + String(distBack));
   }
 
+  /**
+   * WALL DETECTION AND AVOIDANCE CODE (CURRENTLY DISABLED)
+   *
+   * The following code block contains advanced wall detection and avoidance algorithms
+   * that are currently commented out for testing purposes. In the current phase of
+   * development, we are focusing only on emergency breaking functionality.
+   *
+   * Features in this section include:
+   * - Wall approach detection using sensor trend analysis
+   * - Obstacle avoidance by turning in the appropriate direction
+   * - Backup and turn maneuvers when a wall is detected in front
+   * - Prioritized obstacle avoidance based on proximity
+   */
   // if (wallFront || (distFront < EMERGENCY_STOP_DISTANCE_FRONT && distFront > 0))
   // {
   //   // Wall detected in front → back up
@@ -184,30 +215,6 @@ void avoidWall(int direction)
   }
 
   Serial2.println(0);
-}
-
-// This function sends a command to the Motor Board via Serial2
-// 0 = Stop, 1 = Forward, 2 = Backward, 3 = Left, 4 = Right
-// It waits for an acknowledgment (ACK) from the Motor Board before proceeding
-// If no acknowledgment is received after 3 attempts, it prints a warning message
-void sendCommand(int direction, unsigned long duration)
-{
-  unsigned long startTime = millis();
-
-  while (millis() - startTime < duration)
-  {
-    // Send the direction as a number
-    Serial2.println(direction);
-
-    // Log the command
-    Serial.println("Command sent: Direction = " + String(direction));
-
-    delay(100); // Send the command every 100ms
-  }
-
-  // Stop the command after the duration
-  Serial2.println(0);
-  Serial.println("Command stopped: Direction = 0");
 }
 
 // Back up from wall if detected in front. Sequence is as follows:
